@@ -9,4 +9,70 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="#99000000"
+            android:padding="16dp"
+            android:layout_margin="16dp">
+
+            <TextView
+                android:id="@+id/tvState"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="STATE: IDLE"
+                android:textColor="@android:color/white"
+                android:textSize="24sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Motion Check:"
+                android:textColor="@android:color/white"
+                android:layout_marginTop="8dp"/>
+
+            <ProgressBar
+                android:id="@+id/pbMotion"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="200dp"
+                android:layout_height="wrap_content"
+                android:max="100"
+                android:progress="0" />
+
+            <TextView
+                android:id="@+id/tvBarcode"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Barcode: --"
+                android:textColor="@android:color/holo_green_light"
+                android:textSize="18sp"
+                android:layout_marginTop="12dp" />
+
+            <TextView
+                android:id="@+id/tvPO"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="PO: --"
+                android:textColor="@android:color/holo_green_light"
+                android:textSize="18sp"
+                android:layout_marginTop="4dp" />
+                
+            <ImageView
+                android:id="@+id/iv_roi_debug"
+                android:layout_width="200dp"
+                android:layout_height="60dp"
+                android:layout_marginTop="8dp"
+                android:scaleType="fitCenter"
+                android:background="#33FFFFFF" 
+                android:visibility="visible"/>
+
+        </LinearLayout>
+    </RelativeLayout>
+
 </FrameLayout>

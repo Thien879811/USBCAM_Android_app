@@ -22,3 +22,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "usbcam"
 include(":app", ":libausbc", ":libnative", ":libuvc")
+include(":openCV")
