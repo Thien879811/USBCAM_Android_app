@@ -97,7 +97,7 @@ class DemoFragment : CameraFragment(), IPreviewDataCallBack {
     }
 
     override fun getCameraViewContainer(): ViewGroup? {
-        return mViewBinding?.container
+        return null
     }
 
     override fun onCameraState(
