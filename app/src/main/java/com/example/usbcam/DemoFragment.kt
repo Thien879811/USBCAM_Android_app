@@ -35,7 +35,7 @@ class DemoFragment : CameraFragment(), IPreviewDataCallBack {
     private var tvBarcode: android.widget.TextView? = null
     private var tvPO: android.widget.TextView? = null
     private var tvCount: android.widget.TextView? = null
-    private var ivRoiDebug: ImageView? = null
+
 
     // Logic Processor
     private val boxProcessor = BoxProcessor()
@@ -79,7 +79,7 @@ class DemoFragment : CameraFragment(), IPreviewDataCallBack {
         tvBarcode = view.findViewById(R.id.tvBarcode)
         tvPO = view.findViewById(R.id.tvPO)
         tvCount = view.findViewById(R.id.tvCount)
-        ivRoiDebug = view.findViewById(R.id.iv_roi_debug)
+
     }
 
     override fun getCameraView(): IAspectRatio? = mViewBinding?.tvCameraRender
@@ -174,8 +174,7 @@ class DemoFragment : CameraFragment(), IPreviewDataCallBack {
         val bmp = convertMatToBitmap(mRgba!!)
         
         if (bmp != null) {
-            // Visual Debugging (Vẽ chồng lên ảnh trước khi quét)
-            drawTrackingOverlay(bmp)
+
 
             val currentState = boxProcessor.currentState
             when (currentState) {
@@ -205,32 +204,7 @@ class DemoFragment : CameraFragment(), IPreviewDataCallBack {
         gray.release()
     }
     
-    // --- VISUAL DEBUGGING ---
-    private fun drawTrackingOverlay(bmp: Bitmap) {
-        val canvas = Canvas(bmp)
-        val paintBox = Paint().apply {
-            color = Color.YELLOW
-            style = Paint.Style.STROKE
-            strokeWidth = 5f
-        }
-        val paintPoint = Paint().apply {
-            color = Color.RED
-            style = Paint.Style.FILL
-            strokeWidth = 8f
-        }
 
-        // 1. Vẽ Box (Sử dụng Safe Getter)
-        val rectF = boxProcessor.getSafeTrackingRect()
-        if (rectF != null) {
-            canvas.drawRect(rectF, paintBox)
-        }
-        
-        // 2. Vẽ các điểm Features (Để debug xem nó bám vào đâu)
-        val points = boxProcessor.getSafeDebugPoints()
-        for (p in points) {
-            canvas.drawCircle(p.x, p.y, 6f, paintPoint)
-        }
-    }
 
     private fun scanBarcode(bitmap: Bitmap, grayMatClone: Mat) {
         val image = InputImage.fromBitmap(bitmap, 0)
@@ -265,10 +239,7 @@ class DemoFragment : CameraFragment(), IPreviewDataCallBack {
         if (roiW > 10 && roiH > 10) {
             try {
                 val poBitmap = Bitmap.createBitmap(fullBitmap, roiX, roiY, roiW, roiH)
-                activity?.runOnUiThread {
-                    ivRoiDebug?.setImageBitmap(poBitmap)
-                    ivRoiDebug?.visibility = View.VISIBLE
-                }
+
 
                 val image = InputImage.fromBitmap(poBitmap, 0)
                 val options = TextRecognizerOptions.Builder().build()

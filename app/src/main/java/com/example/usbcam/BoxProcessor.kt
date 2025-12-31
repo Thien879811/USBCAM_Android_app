@@ -31,7 +31,7 @@ class BoxProcessor {
     private var prevPoints: MatOfPoint2f? = null
     
     // Debug Data (cho UI vẽ)
-    private val debugPoints = Collections.synchronizedList(ArrayList<PointF>())
+
 
     // Physics
     private var velocityX = 0f
@@ -51,11 +51,7 @@ class BoxProcessor {
         }
     }
 
-    fun getSafeDebugPoints(): List<PointF> {
-        synchronized(debugPoints) {
-            return ArrayList(debugPoints) // Trả về bản sao danh sách
-        }
-    }
+
 
     /**
      * MAIN UPDATE LOOP (Camera Thread)
@@ -152,7 +148,7 @@ class BoxProcessor {
             val validPointsForNextLoop = ArrayList<Point>()
             
             // Debug data sync
-            val debugList = ArrayList<PointF>()
+
 
             for (i in vectors.indices) {
                 val dx = vectors[i].x
@@ -164,15 +160,11 @@ class BoxProcessor {
                     finalDy += dy
                     validCount++
                     validPointsForNextLoop.add(goodP1[i])
-                    debugList.add(PointF(goodP1[i].x.toFloat(), goodP1[i].y.toFloat()))
+
                 }
             }
             
-            // Update Debug Points for UI
-            synchronized(debugPoints) {
-                debugPoints.clear()
-                debugPoints.addAll(debugList)
-            }
+
 
             if (validCount > 0) {
                 val currVx = (finalDx / validCount).toFloat()
@@ -228,7 +220,7 @@ class BoxProcessor {
         }
         
         // Xóa điểm debug khi mất dấu
-        synchronized(debugPoints) { debugPoints.clear() }
+
 
         // Logic check
         if (coastingCounter > Config.COASTING_MAX_FRAMES) {
@@ -423,7 +415,7 @@ class BoxProcessor {
         prevGray = null
         
         synchronized(trackingLock) { trackingRect = null }
-        synchronized(debugPoints) { debugPoints.clear() }
+
         
         velocityX = 0f
         velocityY = 0f
