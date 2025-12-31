@@ -72,6 +72,16 @@
                 android:background="#33FFFFFF" 
                 android:visibility="visible"/>
 
+            <TextView
+                android:id="@+id/tvCount"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="COUNT: 0"
+                android:textColor="@android:color/white"
+                android:textSize="28sp"
+                android:textStyle="bold"
+                android:layout_marginTop="16dp" />
+
         </LinearLayout>
     </RelativeLayout>
 

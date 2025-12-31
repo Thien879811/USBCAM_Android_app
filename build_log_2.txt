@@ -1,0 +1,271 @@
+
+> Configure project :libuvc
+executing ndkBuild
+executing ndkBuild clean
+
+> Configure project :openCV
+Configure OpenCV with Kotlin
+OpenCV: 4.12.0 C:\Users\LVL_TX2\AndroidStudioProjects\usbcam\openCV\build.gradle
+
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :app:mergeDebugNativeDebugMetadata NO-SOURCE
+> Task :app:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :app:dataBindingMergeDependencyArtifactsDebug UP-TO-DATE
+> Task :app:generateDebugResValues UP-TO-DATE
+> Task :app:generateDebugResources UP-TO-DATE
+> Task :libausbc:preBuild UP-TO-DATE
+> Task :libausbc:preDebugBuild UP-TO-DATE
+> Task :libausbc:generateDebugResValues UP-TO-DATE
+> Task :libausbc:generateDebugResources UP-TO-DATE
+> Task :libausbc:packageDebugResources UP-TO-DATE
+> Task :libnative:preBuild UP-TO-DATE
+> Task :libnative:preDebugBuild UP-TO-DATE
+> Task :libnative:generateDebugResValues UP-TO-DATE
+> Task :libnative:generateDebugResources UP-TO-DATE
+> Task :libnative:packageDebugResources UP-TO-DATE
+> Task :libuvc:preBuild UP-TO-DATE
+> Task :libuvc:preDebugBuild UP-TO-DATE
+> Task :libuvc:generateDebugResValues UP-TO-DATE
+> Task :libuvc:generateDebugResources UP-TO-DATE
+> Task :libuvc:packageDebugResources UP-TO-DATE
+> Task :openCV:preBuild UP-TO-DATE
+> Task :openCV:preDebugBuild UP-TO-DATE
+> Task :openCV:generateDebugResValues UP-TO-DATE
+> Task :openCV:generateDebugResources UP-TO-DATE
+> Task :openCV:packageDebugResources UP-TO-DATE
+> Task :app:mergeDebugResources UP-TO-DATE
+> Task :app:packageDebugResources UP-TO-DATE
+> Task :libausbc:processDebugNavigationResources UP-TO-DATE
+> Task :libnative:processDebugNavigationResources UP-TO-DATE
+> Task :libuvc:processDebugNavigationResources UP-TO-DATE
+> Task :openCV:processDebugNavigationResources UP-TO-DATE
+> Task :app:processDebugNavigationResources UP-TO-DATE
+> Task :app:parseDebugLocalResources UP-TO-DATE
+> Task :libausbc:parseDebugLocalResources UP-TO-DATE
+> Task :libausbc:generateDebugRFile UP-TO-DATE
+> Task :libnative:parseDebugLocalResources UP-TO-DATE
+> Task :libnative:generateDebugRFile UP-TO-DATE
+> Task :libuvc:parseDebugLocalResources UP-TO-DATE
+> Task :libuvc:generateDebugRFile UP-TO-DATE
+> Task :openCV:parseDebugLocalResources UP-TO-DATE
+> Task :openCV:generateDebugRFile UP-TO-DATE
+> Task :app:dataBindingGenBaseClassesDebug UP-TO-DATE
+> Task :libausbc:writeDebugAarMetadata UP-TO-DATE
+> Task :libnative:writeDebugAarMetadata UP-TO-DATE
+> Task :libuvc:writeDebugAarMetadata UP-TO-DATE
+> Task :openCV:writeDebugAarMetadata UP-TO-DATE
+> Task :app:checkDebugAarMetadata UP-TO-DATE
+> Task :app:compileDebugNavigationResources UP-TO-DATE
+> Task :app:mapDebugSourceSetPaths UP-TO-DATE
+> Task :app:createDebugCompatibleScreenManifests UP-TO-DATE
+> Task :app:extractDeepLinksDebug UP-TO-DATE
+> Task :libausbc:extractDeepLinksDebug UP-TO-DATE
+> Task :libausbc:processDebugManifest UP-TO-DATE
+> Task :libnative:extractDeepLinksDebug UP-TO-DATE
+> Task :libnative:processDebugManifest UP-TO-DATE
+> Task :libuvc:extractDeepLinksDebug UP-TO-DATE
+> Task :libuvc:processDebugManifest UP-TO-DATE
+> Task :openCV:extractDeepLinksDebug UP-TO-DATE
+> Task :openCV:processDebugManifest UP-TO-DATE
+> Task :app:processDebugMainManifest UP-TO-DATE
+> Task :app:processDebugManifest UP-TO-DATE
+> Task :app:processDebugManifestForPackage UP-TO-DATE
+> Task :libausbc:compileDebugLibraryResources UP-TO-DATE
+> Task :libnative:compileDebugLibraryResources UP-TO-DATE
+> Task :libuvc:compileDebugLibraryResources UP-TO-DATE
+> Task :openCV:compileDebugLibraryResources UP-TO-DATE
+> Task :app:processDebugResources UP-TO-DATE
+> Task :libausbc:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :libnative:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :libnative:compileDebugKotlin UP-TO-DATE
+> Task :libnative:javaPreCompileDebug UP-TO-DATE
+> Task :libnative:compileDebugJavaWithJavac NO-SOURCE
+> Task :libnative:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :libuvc:javaPreCompileDebug UP-TO-DATE
+
+> Task :libuvc:ndkBuild
+make: Entering directory 'C:/Users/LVL_TX2/AndroidStudioProjects/usbcam/libuvc/src/main'
+Android NDK: WARNING: APP_PLATFORM android-21 is higher than android:minSdkVersion 1 in ./AndroidManifest.xml. NDK binaries will *not* be compatible with devices older than android-21. See https://android.googlesource.com/platform/ndk/+/master/docs/user/common_problems.md for more information.    
+make: Leaving directory 'C:/Users/LVL_TX2/AndroidStudioProjects/usbcam/libuvc/src/main'
+make: Entering directory 'C:/Users/LVL_TX2/AndroidStudioProjects/usbcam/libuvc/src/main'
+[arm64-v8a] Install        : libusb100.so => libs/arm64-v8a/libusb100.so
+make: Leaving directory 'C:/Users/LVL_TX2/AndroidStudioProjects/usbcam/libuvc/src/main'
+make: Entering directory 'C:/Users/LVL_TX2/AndroidStudioProjects/usbcam/libuvc/src/main'
+[arm64-v8a] Install        : libjpeg-turbo1500.so => libs/arm64-v8a/libjpeg-turbo1500.so
+make: Leaving directory 'C:/Users/LVL_TX2/AndroidStudioProjects/usbcam/libuvc/src/main'
+make: Entering directory 'C:/Users/LVL_TX2/AndroidStudioProjects/usbcam/libuvc/src/main'
+[arm64-v8a] Install        : libuvc.so => libs/arm64-v8a/libuvc.so
+make: Leaving directory 'C:/Users/LVL_TX2/AndroidStudioProjects/usbcam/libuvc/src/main'
+make: Entering directory 'C:/Users/LVL_TX2/AndroidStudioProjects/usbcam/libuvc/src/main'
+[arm64-v8a] Install        : libUVCCamera.so => libs/arm64-v8a/libUVCCamera.so
+make: Leaving directory 'C:/Users/LVL_TX2/AndroidStudioProjects/usbcam/libuvc/src/main'
+make: Entering directory 'C:/Users/LVL_TX2/AndroidStudioProjects/usbcam/libuvc/src/main'
+[armeabi-v7a] Install        : libuvc.so => libs/armeabi-v7a/libuvc.so
+make: Leaving directory 'C:/Users/LVL_TX2/AndroidStudioProjects/usbcam/libuvc/src/main'
+make: Entering directory 'C:/Users/LVL_TX2/AndroidStudioProjects/usbcam/libuvc/src/main'
+[armeabi-v7a] Install        : libUVCCamera.so => libs/armeabi-v7a/libUVCCamera.so
+make: Leaving directory 'C:/Users/LVL_TX2/AndroidStudioProjects/usbcam/libuvc/src/main'
+make: Entering directory 'C:/Users/LVL_TX2/AndroidStudioProjects/usbcam/libuvc/src/main'
+[armeabi-v7a] Install        : libjpeg-turbo1500.so => libs/armeabi-v7a/libjpeg-turbo1500.so
+make: Leaving directory 'C:/Users/LVL_TX2/AndroidStudioProjects/usbcam/libuvc/src/main'
+make: Entering directory 'C:/Users/LVL_TX2/AndroidStudioProjects/usbcam/libuvc/src/main'
+[armeabi-v7a] Install        : libusb100.so => libs/armeabi-v7a/libusb100.so
+make: Leaving directory 'C:/Users/LVL_TX2/AndroidStudioProjects/usbcam/libuvc/src/main'
+
+> Task :libuvc:compileDebugJavaWithJavac UP-TO-DATE
+> Task :libuvc:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :libausbc:compileDebugKotlin UP-TO-DATE
+> Task :libausbc:javaPreCompileDebug UP-TO-DATE
+> Task :libausbc:compileDebugJavaWithJavac NO-SOURCE
+> Task :libausbc:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :openCV:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :openCV:generateDebugBuildConfig UP-TO-DATE
+> Task :openCV:compileDebugKotlin UP-TO-DATE
+> Task :openCV:javaPreCompileDebug UP-TO-DATE
+> Task :openCV:compileDebugJavaWithJavac UP-TO-DATE
+> Task :openCV:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :app:javaPreCompileDebug UP-TO-DATE
+> Task :app:mergeDebugShaders UP-TO-DATE
+> Task :app:compileDebugShaders NO-SOURCE
+> Task :app:generateDebugAssets UP-TO-DATE
+> Task :libausbc:mergeDebugShaders UP-TO-DATE
+> Task :libausbc:compileDebugShaders NO-SOURCE
+> Task :libausbc:generateDebugAssets UP-TO-DATE
+> Task :libausbc:mergeDebugAssets UP-TO-DATE
+> Task :libnative:mergeDebugShaders UP-TO-DATE
+> Task :libnative:compileDebugShaders NO-SOURCE
+> Task :libnative:generateDebugAssets UP-TO-DATE
+> Task :libnative:mergeDebugAssets UP-TO-DATE
+> Task :libuvc:mergeDebugShaders UP-TO-DATE
+> Task :libuvc:compileDebugShaders NO-SOURCE
+> Task :libuvc:generateDebugAssets UP-TO-DATE
+> Task :libuvc:mergeDebugAssets UP-TO-DATE
+> Task :openCV:mergeDebugShaders UP-TO-DATE
+> Task :openCV:compileDebugShaders NO-SOURCE
+> Task :openCV:generateDebugAssets UP-TO-DATE
+> Task :openCV:mergeDebugAssets UP-TO-DATE
+> Task :app:mergeDebugAssets UP-TO-DATE
+> Task :app:compressDebugAssets UP-TO-DATE
+> Task :libausbc:processDebugJavaRes UP-TO-DATE
+> Task :libnative:processDebugJavaRes UP-TO-DATE
+> Task :libuvc:processDebugJavaRes NO-SOURCE
+> Task :openCV:processDebugJavaRes UP-TO-DATE
+> Task :app:checkDebugDuplicateClasses UP-TO-DATE
+> Task :app:desugarDebugFileDependencies UP-TO-DATE
+> Task :app:mergeExtDexDebug UP-TO-DATE
+> Task :openCV:bundleLibRuntimeToDirDebug UP-TO-DATE
+> Task :libausbc:bundleLibRuntimeToDirDebug UP-TO-DATE
+> Task :libuvc:bundleLibRuntimeToDirDebug UP-TO-DATE
+> Task :libnative:bundleLibRuntimeToDirDebug UP-TO-DATE
+> Task :app:mergeDebugJniLibFolders UP-TO-DATE
+> Task :libausbc:mergeDebugJniLibFolders UP-TO-DATE
+> Task :libausbc:mergeDebugNativeLibs NO-SOURCE
+> Task :libausbc:copyDebugJniLibsProjectOnly UP-TO-DATE
+> Task :libnative:configureCMakeDebug[arm64-v8a]
+> Task :app:mergeLibDexDebug UP-TO-DATE
+> Task :libnative:buildCMakeDebug[arm64-v8a]
+> Task :libnative:configureCMakeDebug[armeabi-v7a]
+> Task :libnative:buildCMakeDebug[armeabi-v7a]
+> Task :libnative:configureCMakeDebug[x86]
+> Task :libnative:buildCMakeDebug[x86]
+> Task :libnative:configureCMakeDebug[x86_64]
+> Task :libnative:buildCMakeDebug[x86_64]
+> Task :libnative:mergeDebugJniLibFolders UP-TO-DATE
+> Task :libnative:mergeDebugNativeLibs UP-TO-DATE
+> Task :libnative:copyDebugJniLibsProjectOnly UP-TO-DATE
+> Task :libuvc:mergeDebugJniLibFolders UP-TO-DATE
+> Task :libuvc:mergeDebugNativeLibs UP-TO-DATE
+> Task :libuvc:copyDebugJniLibsProjectOnly UP-TO-DATE
+> Task :openCV:configureCMakeDebug[arm64-v8a]
+> Task :openCV:buildCMakeDebug[arm64-v8a][opencv_jni_shared]
+> Task :openCV:configureCMakeDebug[armeabi-v7a]
+> Task :openCV:buildCMakeDebug[armeabi-v7a][opencv_jni_shared]
+> Task :openCV:configureCMakeDebug[x86]
+> Task :openCV:buildCMakeDebug[x86][opencv_jni_shared]
+> Task :openCV:configureCMakeDebug[x86_64]
+> Task :openCV:buildCMakeDebug[x86_64][opencv_jni_shared]
+> Task :openCV:mergeDebugJniLibFolders UP-TO-DATE
+> Task :openCV:mergeDebugNativeLibs UP-TO-DATE
+> Task :openCV:copyDebugJniLibsProjectOnly UP-TO-DATE
+> Task :app:mergeDebugNativeLibs UP-TO-DATE
+> Task :app:stripDebugDebugSymbols UP-TO-DATE
+> Task :app:validateSigningDebug UP-TO-DATE
+> Task :app:writeDebugAppMetadata UP-TO-DATE
+> Task :app:writeDebugSigningConfigVersions UP-TO-DATE
+> Task :libausbc:checkDebugAarMetadata UP-TO-DATE
+> Task :libausbc:stripDebugDebugSymbols NO-SOURCE
+> Task :libausbc:copyDebugJniLibsProjectAndLocalJars UP-TO-DATE
+> Task :libausbc:extractDebugAnnotations UP-TO-DATE
+> Task :libausbc:extractDeepLinksForAarDebug UP-TO-DATE
+> Task :libausbc:mergeDebugGeneratedProguardFiles UP-TO-DATE
+> Task :libausbc:mergeDebugConsumerProguardFiles UP-TO-DATE
+> Task :libausbc:prepareDebugArtProfile UP-TO-DATE
+> Task :libausbc:prepareLintJarForPublish UP-TO-DATE
+> Task :libausbc:mergeDebugJavaResource UP-TO-DATE
+> Task :libausbc:syncDebugLibJars UP-TO-DATE
+> Task :libausbc:bundleDebugAar UP-TO-DATE
+> Task :libausbc:assembleDebug UP-TO-DATE
+> Task :libnative:checkDebugAarMetadata UP-TO-DATE
+> Task :libnative:stripDebugDebugSymbols UP-TO-DATE
+> Task :libnative:copyDebugJniLibsProjectAndLocalJars UP-TO-DATE
+> Task :libnative:extractDebugAnnotations UP-TO-DATE
+> Task :libnative:extractDeepLinksForAarDebug UP-TO-DATE
+> Task :libnative:mergeDebugGeneratedProguardFiles UP-TO-DATE
+> Task :libnative:mergeDebugConsumerProguardFiles UP-TO-DATE
+> Task :libnative:prepareDebugArtProfile UP-TO-DATE
+> Task :libnative:prepareLintJarForPublish UP-TO-DATE
+> Task :libnative:mergeDebugJavaResource UP-TO-DATE
+> Task :libnative:syncDebugLibJars UP-TO-DATE
+> Task :libnative:bundleDebugAar UP-TO-DATE
+> Task :libnative:assembleDebug UP-TO-DATE
+> Task :libuvc:checkDebugAarMetadata UP-TO-DATE
+> Task :libuvc:stripDebugDebugSymbols UP-TO-DATE
+> Task :libuvc:copyDebugJniLibsProjectAndLocalJars UP-TO-DATE
+> Task :libuvc:extractDebugAnnotations UP-TO-DATE
+> Task :libuvc:extractDeepLinksForAarDebug UP-TO-DATE
+> Task :libuvc:mergeDebugGeneratedProguardFiles UP-TO-DATE
+> Task :libuvc:mergeDebugConsumerProguardFiles UP-TO-DATE
+> Task :libuvc:prepareDebugArtProfile UP-TO-DATE
+> Task :libuvc:prepareLintJarForPublish UP-TO-DATE
+> Task :libuvc:mergeDebugJavaResource UP-TO-DATE
+> Task :libuvc:syncDebugLibJars UP-TO-DATE
+> Task :libuvc:bundleDebugAar UP-TO-DATE
+> Task :libuvc:assembleDebug UP-TO-DATE
+> Task :openCV:checkDebugAarMetadata UP-TO-DATE
+> Task :openCV:stripDebugDebugSymbols UP-TO-DATE
+> Task :openCV:copyDebugJniLibsProjectAndLocalJars UP-TO-DATE
+> Task :openCV:extractDebugAnnotations UP-TO-DATE
+> Task :openCV:extractDeepLinksForAarDebug UP-TO-DATE
+> Task :openCV:mergeDebugGeneratedProguardFiles UP-TO-DATE
+> Task :openCV:mergeDebugConsumerProguardFiles UP-TO-DATE
+> Task :openCV:externalNativeBuildDebug
+> Task :openCV:generateJsonModelDebug
+> Task :openCV:prefabDebugConfigurePackage UP-TO-DATE
+> Task :openCV:prefabDebugPackage UP-TO-DATE
+> Task :openCV:prepareDebugArtProfile UP-TO-DATE
+> Task :openCV:prepareLintJarForPublish UP-TO-DATE
+> Task :openCV:mergeDebugJavaResource UP-TO-DATE
+> Task :openCV:syncDebugLibJars UP-TO-DATE
+> Task :openCV:bundleDebugAar UP-TO-DATE
+> Task :openCV:assembleDebug UP-TO-DATE
+> Task :app:compileDebugKotlin
+> Task :app:compileDebugJavaWithJavac UP-TO-DATE
+> Task :app:processDebugJavaRes UP-TO-DATE
+> Task :app:mergeDebugJavaResource UP-TO-DATE
+> Task :app:dexBuilderDebug
+> Task :app:mergeProjectDexDebug
+> Task :app:packageDebug
+> Task :app:createDebugApkListingFileRedirect UP-TO-DATE
+> Task :app:assembleDebug
+
+[Incubating] Problems report is available at: file:///C:/Users/LVL_TX2/AndroidStudioProjects/usbcam/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.13/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 1m 39s
+186 actionable tasks: 22 executed, 164 up-to-date

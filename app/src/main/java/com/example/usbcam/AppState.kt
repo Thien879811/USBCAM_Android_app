@@ -2,9 +2,8 @@ package com.example.usbcam
 
 enum class AppState {
     IDLE,
-    SCANNING,
+    PROCESSING,
     VALIDATING,
-    VALIDATED,
-    STABLE,
-    RESET
+    SUCCESS,
+    ERROR_LOCKED
 }
