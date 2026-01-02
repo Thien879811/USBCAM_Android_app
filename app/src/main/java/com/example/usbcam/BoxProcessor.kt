@@ -40,6 +40,10 @@ class BoxProcessor {
     private var stateStartTime = 0L
     private var lastApiAttemptTime = 0L
 
+    // API result
+    var apiResponse: com.example.usbcam.api.PoResponse? = null
+    var identificationStarted = false
+
     // --- THREAD SAFE GETTERS CHO UI ---
     fun getSafeTrackingRect(): RectF? {
         synchronized(trackingLock) {
@@ -400,6 +404,7 @@ class BoxProcessor {
         currentPO = null
         poBuffer.clear()
         feedbackMessage = "READY"
+        identificationStarted = false
     }
 
     private fun resetTrackingData() {

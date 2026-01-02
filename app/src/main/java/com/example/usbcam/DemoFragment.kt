@@ -7,7 +7,8 @@ import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import com.example.usbcam.databinding.FragmentUvcBinding
+import com.bumptech.glide.Glide
+import com.example.usbcam.databinding.LayoutDashboardBinding
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
@@ -26,14 +27,7 @@ import org.opencv.imgcodecs.Imgcodecs
 import org.opencv.imgproc.Imgproc
 
 class DemoFragment : CameraFragment(), IPreviewDataCallBack {
-    private var mViewBinding: FragmentUvcBinding? = null
-
-    // UI References
-    private var tvState: android.widget.TextView? = null
-    private var pbMotion: android.widget.ProgressBar? = null
-    private var tvBarcode: android.widget.TextView? = null
-    private var tvPO: android.widget.TextView? = null
-    private var tvCount: android.widget.TextView? = null
+    private var mViewBinding: LayoutDashboardBinding? = null
 
     // Logic Processor
     private val boxProcessor = BoxProcessor()
@@ -60,6 +54,9 @@ class DemoFragment : CameraFragment(), IPreviewDataCallBack {
     private var vibrator: android.os.Vibrator? = null
     private var lastState = AppState.IDLE
 
+    private val apiService = com.example.usbcam.api.PoApiService.create()
+    private var isApiCalling = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         if (OpenCVLoader.initLocal()) {
@@ -69,18 +66,14 @@ class DemoFragment : CameraFragment(), IPreviewDataCallBack {
 
     override fun getRootView(inflater: LayoutInflater, container: ViewGroup?): View? {
         if (mViewBinding == null) {
-            mViewBinding = FragmentUvcBinding.inflate(inflater, container, false)
+            mViewBinding = LayoutDashboardBinding.inflate(inflater, container, false)
         }
         return mViewBinding?.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        tvState = view.findViewById(R.id.tvState)
-        pbMotion = view.findViewById(R.id.pbMotion)
-        tvBarcode = view.findViewById(R.id.tvBarcode)
-        tvPO = view.findViewById(R.id.tvPO)
-        tvCount = view.findViewById(R.id.tvCount)
+        // Bindings are already set up in getRootView via mViewBinding
     }
 
     override fun getCameraView(): IAspectRatio? = mViewBinding?.tvCameraRender
@@ -277,11 +270,7 @@ class DemoFragment : CameraFragment(), IPreviewDataCallBack {
                 TextRecognition.getClient(options)
                         .process(image)
                         .addOnSuccessListener { visionText -> processOcrResult(visionText.text) }
-                        .addOnCompleteListener {
-                            isScanningPO =
-                                    false // Removed poBitmap.recycle() as Android might need it or
-                            // GC handles it? Safe to let GC handle local bitmaps.
-                        }
+                        .addOnCompleteListener { isScanningPO = false }
             } catch (e: Exception) {
                 isScanningPO = false
             }
@@ -310,27 +299,99 @@ class DemoFragment : CameraFragment(), IPreviewDataCallBack {
                 lastState = currentState
             }
 
-            tvState?.text = "STATUS: $currentState"
-            tvBarcode?.text = "BARCODE: ${boxProcessor.currentBarcode ?: "--"}"
-            tvPO?.text = "PO: ${boxProcessor.currentPO ?: "--"}"
-            tvCount?.text = "COUNT: ${boxProcessor.totalCount} [${boxProcessor.feedbackMessage}]"
+            // Map Logic -> New UI
+            mViewBinding?.let { binding ->
+                // Status
+                binding.tvStatusOk.text = "$currentState"
 
-            val color =
-                    when (currentState) {
-                        AppState.SUCCESS -> Color.GREEN
-                        AppState.ERROR_LOCKED -> Color.RED
-                        AppState.PROCESSING -> Color.YELLOW
-                        AppState.VALIDATING -> Color.BLUE
-                        else -> Color.WHITE
-                    }
-            tvState?.setTextColor(color)
+                // Fields
+                binding.tvUpcValue.text = boxProcessor.currentBarcode ?: "--"
+                binding.tvPoValue.text = boxProcessor.currentPO ?: "--"
+                binding.tvTotalActual.text = "${boxProcessor.totalCount}"
 
-            if (currentState == AppState.PROCESSING || currentState == AppState.VALIDATING) {
-                pbMotion?.visibility = View.VISIBLE
-            } else {
-                pbMotion?.visibility = View.INVISIBLE
+                // API Response
+                binding.tvQtyValue.text = "${boxProcessor.apiResponse?.quantity}"
+                binding.tvRyValue.text = "${boxProcessor.apiResponse?.ry}"
+                binding.tvSizeValue.text = "${boxProcessor.apiResponse?.size}"
+                binding.tvArt.text = "${boxProcessor.apiResponse?.article ?: "--"}"
+                binding.tvRemaining.text = "${boxProcessor.apiResponse?.remainInternal}"
+                binding.tvCompleted.text = "${boxProcessor.apiResponse?.doneInternal}"
+                binding.tvCountry.text = "${boxProcessor.apiResponse?.country}"
+                binding.tvLean.text = "${boxProcessor.apiResponse?.lean}"
+                binding.tvTotalOrder.text = "${boxProcessor.apiResponse?.qtyOrder}"
+                Log.i("DemoFragment", "http://192.168.30.19:5000/shoes-photos/${boxProcessor.apiResponse?.articleImage}")
+                Glide.with(this)
+                    .load("http://192.168.30.19:5000/shoes-photos/${boxProcessor.apiResponse?.articleImage}")
+                    .into(binding.ivShoeImage)
+
+                // Color Logic for Status
+                val color =
+                        when (currentState) {
+                            AppState.SUCCESS -> Color.GREEN
+                            AppState.ERROR_LOCKED -> Color.RED
+                            AppState.PROCESSING -> Color.YELLOW
+                            AppState.VALIDATING -> Color.BLUE
+                            else -> Color.DKGRAY
+                        }
+                binding.tvStatusOk.setTextColor(color)
+
+                if (currentState == AppState.VALIDATING && !isApiCalling) {
+                    callApi()
+                }
+
+                if (currentState == AppState.PROCESSING || currentState == AppState.VALIDATING) {
+                    binding.pbMotion.visibility = View.VISIBLE
+                } else {
+                    binding.pbMotion.visibility = View.GONE
+                }
+
+                // Update Scan Time if available (using lastScanTime or specific logic)
+                binding.tvScanTime.text =
+                        "Thời gian (ss.fff): ${String.format("%.3f", (System.currentTimeMillis() - lastProcessTime)/1000.0)}"
             }
         }
+    }
+
+    private fun callApi() {
+        val po = boxProcessor.currentPO ?: return
+        val barcode = boxProcessor.currentBarcode ?: return
+
+        isApiCalling = true
+        Log.i("DemoFragment", "Calling API for PO: $po, Barcode: $barcode")
+
+        apiService
+                .getPoDetails(po, barcode)
+                .enqueue(
+                        object : retrofit2.Callback<com.example.usbcam.api.PoResponse> {
+                            override fun onResponse(
+                                    call: retrofit2.Call<com.example.usbcam.api.PoResponse>,
+                                    response: retrofit2.Response<com.example.usbcam.api.PoResponse>
+                            ) {
+                                isApiCalling = false
+                                if (response.isSuccessful && response.body() != null) {
+                                    val data = response.body()!!
+                                    Log.d("DemoFragment", "API Success: $data")
+                                    boxProcessor.apiResponse = data
+                                    boxProcessor.currentState = AppState.SUCCESS
+                                    boxProcessor.totalCount++
+                                } else {
+                                    Log.e("DemoFragment", "API Error: ${response.code()}")
+                                    boxProcessor.currentState = AppState.ERROR_LOCKED
+                                }
+                                updateUI()
+                            }
+
+                            override fun onFailure(
+                                    call: retrofit2.Call<com.example.usbcam.api.PoResponse>,
+                                    t: Throwable
+                            ) {
+                                isApiCalling = false
+                                Log.e("DemoFragment", "API Failure: ${t.message}")
+                                boxProcessor.currentState = AppState.ERROR_LOCKED
+                                updateUI()
+                            }
+                        }
+                )
     }
 
     private fun handleStateFeedback(newState: AppState) {
