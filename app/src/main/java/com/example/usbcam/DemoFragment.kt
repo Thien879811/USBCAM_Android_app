@@ -7,8 +7,13 @@ import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.fragment.app.viewModels
+import androidx.recyclerview.widget.LinearLayoutManager
 import com.bumptech.glide.Glide
+import com.example.usbcam.api.PoApiService
 import com.example.usbcam.databinding.LayoutDashboardBinding
+import com.example.usbcam.viewmodel.MainViewModel
+import com.example.usbcam.viewmodel.MainViewModelFactory
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
@@ -27,6 +32,12 @@ import org.opencv.imgcodecs.Imgcodecs
 import org.opencv.imgproc.Imgproc
 
 class DemoFragment : CameraFragment(), IPreviewDataCallBack {
+
+    private val viewModel: MainViewModel by viewModels {
+        MainViewModelFactory(requireActivity().application)
+    }
+
+    // UI
     private var mViewBinding: LayoutDashboardBinding? = null
 
     // Logic Processor
@@ -55,6 +66,7 @@ class DemoFragment : CameraFragment(), IPreviewDataCallBack {
     private var lastState = AppState.IDLE
 
     private val apiService = com.example.usbcam.api.PoApiService.create()
+
     private var isApiCalling = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -74,6 +86,14 @@ class DemoFragment : CameraFragment(), IPreviewDataCallBack {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         // Bindings are already set up in getRootView via mViewBinding
+        viewModel.timeSlotData.observe(viewLifecycleOwner) { data ->
+            mViewBinding?.tvFrameTime?.text = data.frameTime
+            mViewBinding?.tvTagert?.text = data.target.toString()
+            mViewBinding?.tvQuantity?.text = data.quantity.toString()
+        }
+
+        viewModel.loadDataForCurrentTimeSlot()
+
     }
 
     override fun getCameraView(): IAspectRatio? = mViewBinding?.tvCameraRender
@@ -319,10 +339,16 @@ class DemoFragment : CameraFragment(), IPreviewDataCallBack {
                 binding.tvCountry.text = "${boxProcessor.apiResponse?.country}"
                 binding.tvLean.text = "${boxProcessor.apiResponse?.lean}"
                 binding.tvTotalOrder.text = "${boxProcessor.apiResponse?.qtyOrder}"
-                Log.i("DemoFragment", "http://192.168.30.19:5000/shoes-photos/${boxProcessor.apiResponse?.articleImage}")
+                //                Log.i(
+                //                        "DemoFragment",
+                //
+                // "http://192.168.30.19:5000/shoes-photos/${boxProcessor.apiResponse?.articleImage}"
+                //                )
                 Glide.with(this)
-                    .load("http://192.168.30.19:5000/shoes-photos/${boxProcessor.apiResponse?.articleImage}")
-                    .into(binding.ivShoeImage)
+                        .load(
+                                "http://192.168.30.19:5000/shoes-photos/${boxProcessor.apiResponse?.articleImage}"
+                        )
+                        .into(binding.ivShoeImage)
 
                 // Color Logic for Status
                 val color =
@@ -374,6 +400,7 @@ class DemoFragment : CameraFragment(), IPreviewDataCallBack {
                                     boxProcessor.apiResponse = data
                                     boxProcessor.currentState = AppState.SUCCESS
                                     boxProcessor.totalCount++
+                                    viewModel.saveScanData(po, barcode, data)
                                 } else {
                                     Log.e("DemoFragment", "API Error: ${response.code()}")
                                     boxProcessor.currentState = AppState.ERROR_LOCKED
@@ -443,6 +470,12 @@ class DemoFragment : CameraFragment(), IPreviewDataCallBack {
         stopProcessingThread()
         toneGen?.release()
     }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        mViewBinding = null
+    }
+
 
     companion object {
         private const val TAG = "BoxScanner"

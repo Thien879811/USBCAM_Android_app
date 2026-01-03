@@ -9,7 +9,9 @@ import org.opencv.core.*
 import org.opencv.imgproc.Imgproc
 import org.opencv.video.Video
 
+
 class BoxProcessor {
+
     // State
     @Volatile var currentState = AppState.IDLE
     @Volatile var currentBarcode: String? = null
