@@ -13,7 +13,22 @@
         android:background="#FFFFFF"
         android:padding="8dp">
 
+        <TextView
+            android:id="@+id/tv_no_internet"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#F44336"
+            android:gravity="center"
+            android:padding="8dp"
+            android:text="Mất kết nối Internet"
+            android:textColor="#FFFFFF"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:visibility="gone"
+            app:layout_constraintTop_toTopOf="parent" />
+
         <!-- Top Section: Stats and Table -->
+
 
         <!-- Divider -->
         <LinearLayout
@@ -21,7 +36,7 @@
             android:layout_width="match_parent"
             android:layout_height="450dp"
             android:orientation="horizontal"
-            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/tv_no_internet"
             tools:layout_editor_absoluteX="-57dp">
 
             <LinearLayout
@@ -78,39 +93,10 @@
                             android:textStyle="bold" />
                     </TableRow>
 
-                    <TableRow android:padding="4dp">
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:gravity="center"
-                            android:text="1" />
-
-                        <TextView
-                            android:id="@+id/tv_frame_time"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="3"
-                            android:gravity="center"
-                            android:text="10:30-11:30" />
-
-                        <TextView
-                            android:id="@+id/tv_tagert"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="2"
-                            android:gravity="center"
-                            android:text="160" />
-
-                        <TextView
-                            android:id="@+id/tv_quantity"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="2"
-                            android:gravity="center"
-                            android:text="6" />
-                    </TableRow>
+                    <androidx.recyclerview.widget.RecyclerView
+                        android:id="@+id/recyclerTimeSlot"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent" />
 
                 </TableLayout>
 
@@ -124,7 +110,7 @@
 
                     <TextView
                         android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
+                        android:layout_height="35dp"
                         android:text="Tổng :"
                         android:textColor="#333333"
                         android:textSize="24sp"

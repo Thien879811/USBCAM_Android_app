@@ -21,7 +21,7 @@ interface PoApiService {
     @GET("api/target-value")
     suspend fun getTargetByLean(
         @Query("depno") depno: String
-    ):TargetResponse
+    ): retrofit2.Response<TargetResponse>
 
     @retrofit2.http.POST("api/sync/detail")
     suspend fun syncDetail(

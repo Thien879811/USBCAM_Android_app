@@ -19,6 +19,8 @@ class BoxProcessor {
     @Volatile var feedbackMessage: String = "READY"
     @Volatile var totalCount = 0
 
+    @Volatile var target = 0
+
     // Internal State
     private var lastSuccessBarcode: String? = null
     private var lastSuccessTime = 0L
@@ -187,6 +189,12 @@ class BoxProcessor {
 
                 // Update Points for Next Frame
                 prevPoints!!.fromList(validPointsForNextLoop)
+
+                // if (validPointsForNextLoop.size >= 5) {
+                //     prevPoints!!.fromList(validPointsForNextLoop)
+                // } else {
+                //     enterCoasting()
+                // }
 
                 // --- FEATURE REPLENISHMENT ---
                 if (validCount < Config.REPLENISH_THRESHOLD) {

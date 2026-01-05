@@ -18,7 +18,6 @@ import com.example.usbcam.api.PoResponse
 import com.example.usbcam.data.db.AppDatabase
 import com.example.usbcam.repository.ShoeboxRepository
 import com.example.usbcam.worker.SyncWorker
-import com.jiangdg.ausbc.base.BaseApplication
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -28,9 +27,15 @@ import kotlinx.coroutines.launch
 
 class MainViewModel(private val repository: ShoeboxRepository) : ViewModel() {
 
+
+    private val _totalScan = MutableLiveData<Int>()
+    val totalScan: LiveData<Int> = _totalScan
+
     private val _timeSlotData = MutableLiveData<MainViewData>()
     val timeSlotData: LiveData<MainViewData> = _timeSlotData
 
+    private val _targetData = MutableLiveData<TargetData>()
+    val targetData: LiveData<TargetData> = _targetData
     // UI State for scan result
     private val _scanResult = MutableLiveData<PoResponse?>()
     val scanResult: LiveData<PoResponse?> = _scanResult
@@ -39,16 +44,20 @@ class MainViewModel(private val repository: ShoeboxRepository) : ViewModel() {
         viewModelScope.launch {
             val result = repository.processScan(po, barcode)
             _scanResult.postValue(result)
-            loadDataForCurrentTimeSlot()
+            // loadDataForCurrentTimeSlot()
+            loadAllTimeSlots()
         }
+    }
+
+    suspend fun getLocalData(po: String, barcode: String): PoResponse? {
+        return repository.getLocalPoResponse(po, barcode)
     }
 
     fun saveScanData(po: String, barcode: String, data: PoResponse) {
         Log.d("saveScanData", "API Success: $data")
-        viewModelScope.launch {
-            repository.saveLocal(po, barcode, data)
-        }
-        loadDataForCurrentTimeSlot()
+        viewModelScope.launch { repository.saveLocal(po, barcode, data) }
+        // loadDataForCurrentTimeSlot()
+        loadAllTimeSlots()
     }
 
     fun startSyncWorker(context: Context) {
@@ -64,23 +73,71 @@ class MainViewModel(private val repository: ShoeboxRepository) : ViewModel() {
                 .enqueueUniquePeriodicWork("SyncWork", ExistingPeriodicWorkPolicy.KEEP, syncRequest)
     }
 
+    private val _timeSlotList = MutableLiveData<List<TimeSlotItem>>()
+    val timeSlotList: LiveData<List<TimeSlotItem>> = _timeSlotList
+
+    fun loadAllTimeSlots() {
+        viewModelScope.launch {
+            val targetResponse = repository.getTargetByTimeSlot()
+
+            val target = targetResponse?.quantityTarget ?: 140
+            Log.d("loadAllTimeSlots", "${targetResponse?.quantityTarget}")
+            val slots = repository.getAllSlotsToday(target)
+            _timeSlotList.postValue(slots)
+
+            targetResponse?.let {
+                _targetData.postValue(
+                        TargetData(
+                                quantityTarget = it.quantityTarget,
+                                scgs = it.scgs,
+                                qtyByLean = it.qtyByLean
+                        )
+                )
+            }
+        }
+    }
+
     fun loadDataForCurrentTimeSlot() {
         viewModelScope.launch {
             val (start, end) = calculateTimeSlot()
             val details = repository.getDetailsByTimeSlot(start, end)
-            val target  = repository.getTargetByTimeSlot()
+
+            val targetResponse = repository.getTargetByTimeSlot()
+            val target = targetResponse?.quantityTarget ?: 160
 
             val frameTime = "${start} - ${end}"
 
             _timeSlotData.postValue(
-                MainViewData(
-                    frameTime = frameTime,
-                    target = target,              // target fix cứng (hoặc lấy DB)
-                    quantity = details.size
-                )
+                    MainViewData(frameTime = frameTime, target = target, quantity = details.size)
             )
         }
     }
+
+    fun loadTarget() {
+        viewModelScope.launch {
+            val target = repository.getTargetByTimeSlot()
+
+            target?.let {
+                _targetData.postValue(
+                        TargetData(
+                                quantityTarget = it.quantityTarget,
+                                scgs = it.scgs,
+                                qtyByLean = it.qtyByLean
+                        )
+                )
+            }
+        }
+    }
+
+    fun loadTotal(){
+        viewModelScope.launch {
+            val total = repository.getAllToday()
+            _totalScan.postValue(
+                total
+            )
+        }
+    }
+
 
     private fun formatTime(time: Long): String {
         val sdf = SimpleDateFormat("HH:mm", Locale.getDefault())

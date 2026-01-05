@@ -3,6 +3,7 @@ package com.example.usbcam.repository
 import android.util.Log
 import com.example.usbcam.api.PoApiService
 import com.example.usbcam.api.PoResponse
+import com.example.usbcam.api.TargetResponse
 import com.example.usbcam.data.db.ShoeboxDao
 import com.example.usbcam.data.model.ShoeboxDetail
 import com.example.usbcam.data.model.ShoeboxTotal
@@ -59,21 +60,29 @@ class ShoeboxRepository(private val dao: ShoeboxDao, private val apiService: PoA
 
         val currentTotal = dao.getTotalByUpcAndPo(upc, po)
         val newTotal =
-                currentTotal?.copy(Total_Qty_Scan = totalQty, Modify = getCurrentTime(), Synced = 0)
-                        ?: ShoeboxTotal(
-                                RY = data.ry,
-                                Size = data.size,
-                                PO = po,
-                                UPC = upc,
-                                Total_Qty_Scan = totalQty,
-                                Total_Qty_ERP = 0,
-                                Article = data.article,
-                                DateScan = getCurrentTime(),
-                                Modify = getCurrentTime(),
-                                User_Serial_Key = "DEVICE",
-                                Line = data.lean,
-                                Synced = 0
-                        )
+                if (currentTotal != null) {
+                    currentTotal.copy(
+                            Total_Qty_ERP = data.quantity ?: 0,
+                            Total_Qty_Scan = totalQty,
+                            Modify = getCurrentTime(),
+                            Synced = 0
+                    )
+                } else {
+                    ShoeboxTotal(
+                            RY = data.ry,
+                            Size = data.size,
+                            PO = po,
+                            UPC = upc,
+                            Total_Qty_Scan = totalQty,
+                            Total_Qty_ERP = data.quantity ?: 0,
+                            Article = data.article,
+                            DateScan = getCurrentTime(),
+                            Modify = getCurrentTime(),
+                            User_Serial_Key = "DEVICE",
+                            Line = data.lean,
+                            Synced = 0
+                    )
+                }
         dao.insertTotal(newTotal)
     }
 
@@ -87,7 +96,6 @@ class ShoeboxRepository(private val dao: ShoeboxDao, private val apiService: PoA
 
     suspend fun syncData() {
         val unsyncedDetails = dao.getUnsyncedDetails()
-        Log.d("SyncWorker" , "SyncWorker auto update date form server")
         unsyncedDetails.forEach { detail ->
             try {
                 val response = apiService.syncDetail(detail)
@@ -111,69 +119,126 @@ class ShoeboxRepository(private val dao: ShoeboxDao, private val apiService: PoA
             }
         }
     }
+    suspend fun getAllSlotsToday(target: Int): List<TimeSlotItem> {
+        val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+        val dbFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+        val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
 
-    suspend fun getAllSlotsToday(): List<TimeSlotItem> {
-        val sdfDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-        val today = sdfDate.format(Date())
+        val today = dateFormat.format(Date())
 
         val startDay = "$today 00:00:00"
-        val endDay = "$today 23:59:00"
+        val endDay = dateFormat.format(
+            Calendar.getInstance().apply {
+                time = Date()
+                add(Calendar.DAY_OF_MONTH, 1)
+            }.time
+        ) + " 00:00:00"
 
-        val details = dao.getDetailsInTimeRange(startDay,endDay)
+        val details = dao.getDetailsInTimeRange(startDay, endDay)
 
-        // Khung giờ cố định (ví dụ 7:30 → 17:30)
         val slots = mutableListOf<TimeSlotItem>()
-        val calendar = Calendar.getInstance()
-        calendar.set(Calendar.HOUR_OF_DAY, 7)
-        calendar.set(Calendar.MINUTE, 30)
+        val calendar = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, 7)
+            set(Calendar.MINUTE, 30)
+            set(Calendar.SECOND, 0)
+        }
 
         var index = 1
 
-        repeat(10) {   // 10 khung giờ
+        repeat(10) {
             val start = calendar.time
             calendar.add(Calendar.HOUR_OF_DAY, 1)
             val end = calendar.time
 
-            val frameTime =
-                "${start} - ${end}"
-
-            val startStr = start.toDbString()
-            val endStr = end.toDbString()
+            val frameTime = "${timeFormat.format(start)} - ${timeFormat.format(end)}"
 
             val count = details.count {
-                it.DateScan >= startStr && it.DateScan < endStr
+                val scanTime = dbFormat.parse(it.DateScan) ?: return@count false
+                scanTime >= start && scanTime < end
             }
 
-            slots.add(
-                TimeSlotItem(
-                    index = index++,
-                    frameTime = frameTime,
-                    target = 160,      // hoặc gọi API target
-                    quantity = count
+            if (count > 0) {
+                slots.add(
+                    TimeSlotItem(
+                        index = index++,
+                        frameTime = frameTime,
+                        target = target,
+                        quantity = count
+                    )
                 )
-            )
+            }
         }
 
         return slots
     }
 
 
-    suspend fun getTargetByTimeSlot(): Int {
-        val response = apiService.getTargetByLean("LHGG4G01")
-        return  response.quantityTarget
+    suspend fun getAllToday(): Int {
+        val sdfDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+        val today = sdfDate.format(Date())
+
+        val startDay = "$today 00:00:00"
+
+        val endDay = sdfDate.format(
+            Calendar.getInstance().apply {
+                time = Date()
+                add(Calendar.DAY_OF_MONTH, 1)
+            }.time
+        ) + " 00:00:00"
+
+        val details = dao.getDetailsInTimeRange(startDay, endDay)
+        return details.size
     }
+
+
+    suspend fun getTargetByTimeSlot(): TargetResponse? {
+        return try {
+            val response = apiService.getTargetByLean("LHGG4G01")
+
+            if (response.isSuccessful) {
+                Log.d("getTargetByTimeSlot", "${response.body()}")
+                response.body()
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            Log.e("getTargetByTimeSlot", "API error", e)
+            null
+        }
+    }
+
     private fun getCurrentTime(): String {
         return SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
     }
 
-
-    private val sdf = SimpleDateFormat(
-        "yyyy-MM-dd HH:mm:ss",
-        Locale.getDefault()
-    )
+    private val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
 
     private fun Date.toDbString(): String = sdf.format(this)
 
+    suspend fun getLocalPoResponse(po: String, barcode: String): PoResponse? {
+        val total = dao.getTotalByUpcAndPo(barcode, po) ?: return null
+        val details = dao.getDetailsByUpc(barcode).filter { it.PO == po }
+        val image = details.firstOrNull()?.ShoeImage
 
-
+        return PoResponse(
+                upc = total.UPC,
+                size = total.Size,
+                po = total.PO,
+                ry = total.RY,
+                article = total.Article,
+                articleImage = image,
+                quantity = total.Total_Qty_Scan,
+                zbln = null, // Not stored locally
+                khpo = null, // Not stored locally
+                country = null, // Not stored locally
+                psdt = null, // Not stored locally
+                pedt = null, // Not stored locally
+                qtyOrder = total.Total_Qty_ERP,
+                remainInternal =
+                        if (total.Total_Qty_ERP > 0) total.Total_Qty_ERP - total.Total_Qty_Scan
+                        else 0,
+                doneInternal = total.Total_Qty_Scan,
+                lean = total.Line
+        )
+    }
 }

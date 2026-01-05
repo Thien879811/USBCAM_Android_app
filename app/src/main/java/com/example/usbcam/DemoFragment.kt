@@ -8,12 +8,14 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.bumptech.glide.Glide
 import com.example.usbcam.api.PoApiService
 import com.example.usbcam.databinding.LayoutDashboardBinding
 import com.example.usbcam.viewmodel.MainViewModel
 import com.example.usbcam.viewmodel.MainViewModelFactory
+import com.example.usbcam.viewmodel.TimeSlotAdapter
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
@@ -25,6 +27,7 @@ import com.jiangdg.ausbc.camera.bean.CameraRequest
 import com.jiangdg.ausbc.render.env.RotateType
 import com.jiangdg.ausbc.widget.IAspectRatio
 import java.util.concurrent.ArrayBlockingQueue
+import kotlinx.coroutines.launch
 import org.opencv.android.OpenCVLoader
 import org.opencv.android.Utils
 import org.opencv.core.*
@@ -86,14 +89,44 @@ class DemoFragment : CameraFragment(), IPreviewDataCallBack {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         // Bindings are already set up in getRootView via mViewBinding
-        viewModel.timeSlotData.observe(viewLifecycleOwner) { data ->
-            mViewBinding?.tvFrameTime?.text = data.frameTime
-            mViewBinding?.tvTagert?.text = data.target.toString()
-            mViewBinding?.tvQuantity?.text = data.quantity.toString()
+        //        viewModel.timeSlotData.observe(viewLifecycleOwner) { data ->
+        //            mViewBinding?.tvFrameTime?.text = data.frameTime
+        //            mViewBinding?.tvTagert?.text = data.target.toString()
+        //            mViewBinding?.tvQuantity?.text = data.quantity.toString()
+        //        }
+
+        // Setup RecyclerView
+        val adapter = TimeSlotAdapter()
+        mViewBinding?.recyclerTimeSlot?.apply {
+            layoutManager = LinearLayoutManager(context)
+            this.adapter = adapter
         }
 
-        viewModel.loadDataForCurrentTimeSlot()
+        viewModel.timeSlotList.observe(viewLifecycleOwner) { list -> adapter.submitList(list) }
 
+        viewModel.targetData.observe(viewLifecycleOwner) { target ->
+            if (target != null) {
+                boxProcessor.target = target.quantityTarget
+            }
+        }
+
+        viewModel.totalScan.observe(viewLifecycleOwner){
+            total ->
+            if(total != null){
+                boxProcessor.totalCount = total
+            }
+        }
+
+        viewModel.loadTotal()
+        viewModel.loadTarget()
+        viewModel.loadAllTimeSlots()
+
+        // Monitor Network
+        val networkMonitor = com.example.usbcam.utils.NetworkConnectionMonitor(requireContext())
+        networkMonitor.observe(viewLifecycleOwner) { isConnected ->
+            Log.d(TAG, "Network Status: $isConnected")
+            mViewBinding?.tvNoInternet?.visibility = if (isConnected) View.GONE else View.VISIBLE
+        }
     }
 
     override fun getCameraView(): IAspectRatio? = mViewBinding?.tvCameraRender
@@ -339,11 +372,8 @@ class DemoFragment : CameraFragment(), IPreviewDataCallBack {
                 binding.tvCountry.text = "${boxProcessor.apiResponse?.country}"
                 binding.tvLean.text = "${boxProcessor.apiResponse?.lean}"
                 binding.tvTotalOrder.text = "${boxProcessor.apiResponse?.qtyOrder}"
-                //                Log.i(
-                //                        "DemoFragment",
-                //
-                // "http://192.168.30.19:5000/shoes-photos/${boxProcessor.apiResponse?.articleImage}"
-                //                )
+                binding.tvTotalTarget.text = "${boxProcessor.target}"
+
                 Glide.with(this)
                         .load(
                                 "http://192.168.30.19:5000/shoes-photos/${boxProcessor.apiResponse?.articleImage}"
@@ -414,11 +444,40 @@ class DemoFragment : CameraFragment(), IPreviewDataCallBack {
                             ) {
                                 isApiCalling = false
                                 Log.e("DemoFragment", "API Failure: ${t.message}")
-                                boxProcessor.currentState = AppState.ERROR_LOCKED
-                                updateUI()
+                                // Try checking local data
+                                if (isAdded) {
+                                    checkLocalDataFallback(po, barcode)
+                                } else {
+                                    boxProcessor.currentState = AppState.ERROR_LOCKED
+                                    updateUI()
+                                }
                             }
                         }
                 )
+    }
+
+    private fun checkLocalDataFallback(po: String, barcode: String) {
+        viewLifecycleOwner.lifecycleScope.launch {
+            try {
+                val localData = viewModel.getLocalData(po, barcode)
+                if (localData != null) {
+                    Log.d("DemoFragment", "Offline Fallback Success: $localData")
+                    boxProcessor.apiResponse = localData
+                    boxProcessor.currentState = AppState.SUCCESS
+                    boxProcessor.totalCount++
+                    // Identify this as a new scan being saved
+                    viewModel.saveScanData(po, barcode, localData)
+                } else {
+                    Log.e("DemoFragment", "Offline Fallback Failed: No local data")
+                    boxProcessor.currentState = AppState.ERROR_LOCKED
+                }
+                updateUI()
+            } catch (e: Exception) {
+                Log.e("DemoFragment", "Error in fallback: ${e.message}")
+                boxProcessor.currentState = AppState.ERROR_LOCKED
+                updateUI()
+            }
+        }
     }
 
     private fun handleStateFeedback(newState: AppState) {
@@ -475,7 +534,6 @@ class DemoFragment : CameraFragment(), IPreviewDataCallBack {
         super.onDestroyView()
         mViewBinding = null
     }
-
 
     companion object {
         private const val TAG = "BoxScanner"
