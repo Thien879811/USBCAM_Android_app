@@ -1,3 +1,0 @@
-D:/Count/APP/USBCAM_Android_app/libnative/.cxx/Debug/2e5e5k1c/x86/CMakeFiles/nativelib.dir
-D:/Count/APP/USBCAM_Android_app/libnative/.cxx/Debug/2e5e5k1c/x86/CMakeFiles/edit_cache.dir
-D:/Count/APP/USBCAM_Android_app/libnative/.cxx/Debug/2e5e5k1c/x86/CMakeFiles/rebuild_cache.dir

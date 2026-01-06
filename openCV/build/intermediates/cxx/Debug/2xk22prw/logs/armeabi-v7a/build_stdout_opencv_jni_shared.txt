@@ -1,2 +1,0 @@
-ninja: Entering directory `D:\Count\APP\USBCAM_Android_app\openCV\.cxx\Debug\2xk22prw\armeabi-v7a'
-ninja: no work to do.

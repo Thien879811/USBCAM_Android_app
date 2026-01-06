@@ -1,3 +1,0 @@
-D:/Count/APP/USBCAM_Android_app/openCV/.cxx/Debug/2xk22prw/x86_64/CMakeFiles/opencv_jni_shared.dir
-D:/Count/APP/USBCAM_Android_app/openCV/.cxx/Debug/2xk22prw/x86_64/CMakeFiles/edit_cache.dir
-D:/Count/APP/USBCAM_Android_app/openCV/.cxx/Debug/2xk22prw/x86_64/CMakeFiles/rebuild_cache.dir
