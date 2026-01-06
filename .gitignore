@@ -32,18 +32,22 @@ build/
 # ===== OpenCV (module import) =====
 openCV/.cxx/
 openCV/build/
-
+openCV/
 libuvc/.cxx/
 libuvc/build/
+libuvc/
 
 libausbc/.cxx/
 libausbc/build/
-
+libausbc/
 
 libnative/.cxx/
 libnative/build/
+libnative/
 
 libusb/.cxx/
 libusb/build/
+libusb/
+
 # ===== Logs =====
 *.log
