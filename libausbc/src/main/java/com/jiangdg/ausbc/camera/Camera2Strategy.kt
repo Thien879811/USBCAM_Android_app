@@ -344,6 +344,7 @@ class Camera2Strategy(ctx: Context) : ICameraStrategy(ctx) {
         }
     }
 
+    @Suppress("DEPRECATION")
     private fun realStartPreview() {
         val cameraDevice = mCameraDeviceFuture?.get(3, TimeUnit.SECONDS)
         val cameraSession = mCameraSessionFuture?.get(3, TimeUnit.SECONDS)

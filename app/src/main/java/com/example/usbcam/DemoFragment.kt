@@ -51,7 +51,7 @@ class DemoFragment : CameraFragment(), IPreviewDataCallBack {
     private var mYuvMat: Mat? = null
 
     // Threading
-    private val frameQueue = ArrayBlockingQueue<ByteArray>(1)
+    private val frameQueue = ArrayBlockingQueue<ByteArray>(3)
     private var frameWidth = 0
     private var frameHeight = 0
     @Volatile private var isProcessingThreadRunning = false
@@ -68,7 +68,7 @@ class DemoFragment : CameraFragment(), IPreviewDataCallBack {
     private var vibrator: android.os.Vibrator? = null
     private var lastState = AppState.IDLE
 
-    private val apiService = com.example.usbcam.api.PoApiService.create()
+    private val apiService = PoApiService.create()
 
     private var isApiCalling = false
 
@@ -185,29 +185,48 @@ class DemoFragment : CameraFragment(), IPreviewDataCallBack {
                     while (isProcessingThreadRunning) {
                         try {
                             val data = frameQueue.take()
-                            processFrame(data)
+                            if (data != null) {
+                                processFrame(data)
+                            }
                         } catch (e: InterruptedException) {
                             break
                         }
                     }
                 }
-                        .apply { start() }
+                        .apply { 
+                            name = "FrameProcessing"
+                            isDaemon = false
+                            start() 
+                        }
     }
 
     private fun stopProcessingThread() {
         isProcessingThreadRunning = false
         processingThread?.interrupt()
+        processingThread?.join(5000L) // Wait up to 5 seconds for thread to finish
         processingThread = null
         frameQueue.clear()
-        mYuvMat?.release()
-        mRgba?.release()
+        
+        try {
+            mYuvMat?.release()
+            mYuvMat = null
+        } catch (e: Exception) {
+            Log.e(TAG, "Error releasing mYuvMat", e)
+        }
+        
+        try {
+            mRgba?.release()
+            mRgba = null
+        } catch (e: Exception) {
+            Log.e(TAG, "Error releasing mRgba", e)
+        }
     }
 
     private fun processFrame(data: ByteArray) {
         val now = System.currentTimeMillis()
 
         // 1. FPS Limiter
-        if (now - lastProcessTime < (1000 / Config.MAX_PROCESSING_FPS)) {
+        if (now - lastProcessTime < (1000L / Config.MAX_PROCESSING_FPS)) {
             return
         }
         lastProcessTime = now
@@ -226,6 +245,7 @@ class DemoFragment : CameraFragment(), IPreviewDataCallBack {
                 Imgproc.cvtColor(mYuvMat, mRgba, Imgproc.COLOR_YUV2RGBA_NV21)
             }
         } catch (e: Exception) {
+            Log.e(TAG, "Error decoding frame", e)
             decoded.release()
             return
         }
@@ -238,7 +258,11 @@ class DemoFragment : CameraFragment(), IPreviewDataCallBack {
         Imgproc.cvtColor(mRgba, gray, Imgproc.COLOR_RGBA2GRAY)
 
         // --- CORE KINEMATIC UPDATE ---
-        boxProcessor.updateLogic(gray)
+        try {
+            boxProcessor.updateLogic(gray)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error in boxProcessor logic", e)
+        }
 
         // 2. Throttle MLKit Scans
         if (now - lastScanTime > Config.SCAN_THROTTLE_MS) {
@@ -297,11 +321,19 @@ class DemoFragment : CameraFragment(), IPreviewDataCallBack {
                     }
                 }
                 .addOnCompleteListener {
-                    grayMatClone.release()
+                    try {
+                        grayMatClone.release()
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error releasing grayMatClone", e)
+                    }
                     isScanningBarcode = false
                 }
                 .addOnFailureListener {
-                    grayMatClone.release()
+                    try {
+                        grayMatClone.release()
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error releasing grayMatClone", e)
+                    }
                     isScanningBarcode = false
                 }
     }
@@ -324,6 +356,7 @@ class DemoFragment : CameraFragment(), IPreviewDataCallBack {
                         .addOnSuccessListener { visionText -> processOcrResult(visionText.text) }
                         .addOnCompleteListener { isScanningPO = false }
             } catch (e: Exception) {
+                Log.e(TAG, "Error in scanPOInRegion", e)
                 isScanningPO = false
             }
         } else {
@@ -464,7 +497,6 @@ class DemoFragment : CameraFragment(), IPreviewDataCallBack {
                     boxProcessor.apiResponse = localData
                     boxProcessor.currentState = AppState.SUCCESS
                     boxProcessor.totalCount++
-                    // Identify this as a new scan being saved
                     viewModel.saveScanData(po, barcode, localData)
                 } else {
                     Log.e("DemoFragment", "Offline Fallback Failed: No local data")
@@ -493,12 +525,12 @@ class DemoFragment : CameraFragment(), IPreviewDataCallBack {
                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
                     vibrator?.vibrate(
                             android.os.VibrationEffect.createOneShot(
-                                    150,
+                                    150L,
                                     android.os.VibrationEffect.DEFAULT_AMPLITUDE
                             )
                     )
                 } else {
-                    @Suppress("DEPRECATION") vibrator?.vibrate(150)
+                    @Suppress("DEPRECATION") vibrator?.vibrate(150L)
                 }
             }
             AppState.ERROR_LOCKED -> {
@@ -506,12 +538,12 @@ class DemoFragment : CameraFragment(), IPreviewDataCallBack {
                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
                     vibrator?.vibrate(
                             android.os.VibrationEffect.createOneShot(
-                                    500,
+                                    500L,
                                     android.os.VibrationEffect.DEFAULT_AMPLITUDE
                             )
                     )
                 } else {
-                    @Suppress("DEPRECATION") vibrator?.vibrate(500)
+                    @Suppress("DEPRECATION") vibrator?.vibrate(500L)
                 }
             }
             AppState.PROCESSING -> {
@@ -527,6 +559,7 @@ class DemoFragment : CameraFragment(), IPreviewDataCallBack {
             Utils.matToBitmap(mat, bmp)
             bmp
         } catch (e: Exception) {
+            Log.e(TAG, "Error converting Mat to Bitmap", e)
             null
         }
     }
@@ -534,7 +567,11 @@ class DemoFragment : CameraFragment(), IPreviewDataCallBack {
     override fun onDestroy() {
         super.onDestroy()
         stopProcessingThread()
-        toneGen?.release()
+        try {
+            toneGen?.release()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error releasing tone generator", e)
+        }
     }
 
     override fun onDestroyView() {

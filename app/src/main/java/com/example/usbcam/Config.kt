@@ -26,6 +26,6 @@ object Config {
     const val MIN_PO_LENGTH = 5
 
     // --- PERFORMANCE & THERMAL CONTROL ---
-    const val MAX_PROCESSING_FPS = 15
+    const val MAX_PROCESSING_FPS = 20
     const val SCAN_THROTTLE_MS = 500L
 }

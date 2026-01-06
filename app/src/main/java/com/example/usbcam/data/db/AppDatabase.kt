@@ -1,6 +1,5 @@
 package com.example.usbcam.data.db
 
-import android.app.Application
 import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
@@ -22,7 +21,9 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "shoebox_database"
-                ).build()
+                )
+                .enableMultiInstanceInvalidation()
+                .build()
                 INSTANCE = instance
                 instance
             }

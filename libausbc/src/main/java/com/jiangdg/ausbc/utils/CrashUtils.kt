@@ -87,6 +87,7 @@ object CrashUtils : Thread.UncaughtExceptionHandler {
         // upload to server
     }
 
+    @Suppress("DEPRECATION")
     private fun saveErrorInfo(ex: Throwable): File? {
         var logFile: File? = null
         var fw: FileWriter? = null

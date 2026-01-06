@@ -114,6 +114,9 @@ class BoxProcessor {
                     3
             )
         } catch (e: Exception) {
+            nextPoints.release()
+            status.release()
+            err.release()
             return false
         }
 
@@ -189,12 +192,6 @@ class BoxProcessor {
 
                 // Update Points for Next Frame
                 prevPoints!!.fromList(validPointsForNextLoop)
-
-                // if (validPointsForNextLoop.size >= 5) {
-                //     prevPoints!!.fromList(validPointsForNextLoop)
-                // } else {
-                //     enterCoasting()
-                // }
 
                 // --- FEATURE REPLENISHMENT ---
                 if (validCount < Config.REPLENISH_THRESHOLD) {
@@ -418,10 +415,19 @@ class BoxProcessor {
     }
 
     private fun resetTrackingData() {
-        prevPoints?.release()
-        prevPoints = null
-        prevGray?.release()
-        prevGray = null
+        try {
+            prevPoints?.release()
+            prevPoints = null
+        } catch (e: Exception) {
+            Log.e("BoxProcessor", "Error releasing prevPoints", e)
+        }
+        
+        try {
+            prevGray?.release()
+            prevGray = null
+        } catch (e: Exception) {
+            Log.e("BoxProcessor", "Error releasing prevGray", e)
+        }
 
         synchronized(trackingLock) { trackingRect = null }
 

@@ -233,6 +233,7 @@ class CameraUvcStrategy(ctx: Context) : ICameraStrategy(ctx) {
         postCameraStatus(CameraStatus(CameraStatus.STOP))
     }
 
+    @Suppress("DEPRECATION")
     override fun captureImageInternal(savePath: String?) {
         if (!hasCameraPermission() || !hasStoragePermission()) {
             mMainHandler.post {
