@@ -110,9 +110,8 @@ class DemoFragment : CameraFragment(), IPreviewDataCallBack {
             }
         }
 
-        viewModel.totalScan.observe(viewLifecycleOwner){
-            total ->
-            if(total != null){
+        viewModel.totalScan.observe(viewLifecycleOwner) { total ->
+            if (total != null) {
                 boxProcessor.totalCount = total
             }
         }
@@ -491,21 +490,29 @@ class DemoFragment : CameraFragment(), IPreviewDataCallBack {
         when (newState) {
             AppState.SUCCESS -> {
                 toneGen?.startTone(android.media.ToneGenerator.TONE_CDMA_ALERT_CALL_GUARD, 200)
-                vibrator?.vibrate(
-                        android.os.VibrationEffect.createOneShot(
-                                150,
-                                android.os.VibrationEffect.DEFAULT_AMPLITUDE
-                        )
-                )
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                    vibrator?.vibrate(
+                            android.os.VibrationEffect.createOneShot(
+                                    150,
+                                    android.os.VibrationEffect.DEFAULT_AMPLITUDE
+                            )
+                    )
+                } else {
+                    @Suppress("DEPRECATION") vibrator?.vibrate(150)
+                }
             }
             AppState.ERROR_LOCKED -> {
                 toneGen?.startTone(android.media.ToneGenerator.TONE_CDMA_EMERGENCY_RINGBACK, 500)
-                vibrator?.vibrate(
-                        android.os.VibrationEffect.createOneShot(
-                                500,
-                                android.os.VibrationEffect.DEFAULT_AMPLITUDE
-                        )
-                )
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                    vibrator?.vibrate(
+                            android.os.VibrationEffect.createOneShot(
+                                    500,
+                                    android.os.VibrationEffect.DEFAULT_AMPLITUDE
+                            )
+                    )
+                } else {
+                    @Suppress("DEPRECATION") vibrator?.vibrate(500)
+                }
             }
             AppState.PROCESSING -> {
                 toneGen?.startTone(android.media.ToneGenerator.TONE_PROP_BEEP, 50)
