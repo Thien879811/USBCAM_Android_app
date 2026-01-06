@@ -1,0 +1,49 @@
+# ===== Android Studio / IntelliJ =====
+*.iml
+.idea/
+.gradle/
+
+# ===== Local config =====
+local.properties
+
+# ===== Build outputs =====
+build/
+app/build/
+captures/
+
+# ===== Native / NDK =====
+.externalNativeBuild/
+.cxx/
+
+# ===== Kotlin =====
+.kotlin/
+
+# ===== macOS =====
+.DS_Store
+
+# ===== Flutter =====
+.dart_tool/
+.packages
+.pub-cache/
+.flutter-plugins
+.flutter-plugins-dependencies
+build/
+
+# ===== OpenCV (module import) =====
+openCV/.cxx/
+openCV/build/
+
+libuvc/.cxx/
+libuvc/build/
+
+libausbc/.cxx/
+libausbc/build/
+
+
+libnative/.cxx/
+libnative/build/
+
+libusb/.cxx/
+libusb/build/
+# ===== Logs =====
+*.log
