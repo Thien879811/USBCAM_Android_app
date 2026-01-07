@@ -193,10 +193,10 @@ class DemoFragment : CameraFragment(), IPreviewDataCallBack {
                         }
                     }
                 }
-                        .apply { 
+                        .apply {
                             name = "FrameProcessing"
                             isDaemon = false
-                            start() 
+                            start()
                         }
     }
 
@@ -206,14 +206,14 @@ class DemoFragment : CameraFragment(), IPreviewDataCallBack {
         processingThread?.join(5000L) // Wait up to 5 seconds for thread to finish
         processingThread = null
         frameQueue.clear()
-        
+
         try {
             mYuvMat?.release()
             mYuvMat = null
         } catch (e: Exception) {
             Log.e(TAG, "Error releasing mYuvMat", e)
         }
-        
+
         try {
             mRgba?.release()
             mRgba = null
@@ -368,7 +368,9 @@ class DemoFragment : CameraFragment(), IPreviewDataCallBack {
         val lines = text.split("\n", " ")
         for (line in lines) {
             val clean = line.trim()
-            if (clean.length >= Config.MIN_PO_LENGTH && clean.all { it.isDigit() }) {
+            if (clean.length in Config.MIN_PO_LENGTH..Config.MAX_PO_LENGTH &&
+                            clean.all { it.isDigit() }
+            ) {
                 boxProcessor.addPO(clean)
                 return
             }
@@ -387,7 +389,12 @@ class DemoFragment : CameraFragment(), IPreviewDataCallBack {
             // Map Logic -> New UI
             mViewBinding?.let { binding ->
                 // Status
-                binding.tvStatusOk.text = "$currentState"
+                if (currentState == AppState.SUCCESS || currentState == AppState.VALIDATING) {
+                    binding.tvStatusOk.text =
+                            "${boxProcessor.feedbackMessage} (${boxProcessor.confidenceScore}%)"
+                } else {
+                    binding.tvStatusOk.text = boxProcessor.feedbackMessage
+                }
 
                 // Fields
                 binding.tvUpcValue.text = boxProcessor.currentBarcode ?: "--"

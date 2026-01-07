@@ -24,6 +24,8 @@ object Config {
     const val VOTING_BUFFER_SIZE = 3
     const val DEDUPLICATION_WINDOW_MS = 2000L
     const val MIN_PO_LENGTH = 5
+    const val MAX_PO_LENGTH = 15
+    const val PO_TIMEOUT_MS = 8000L
 
     // --- PERFORMANCE & THERMAL CONTROL ---
     const val MAX_PROCESSING_FPS = 20

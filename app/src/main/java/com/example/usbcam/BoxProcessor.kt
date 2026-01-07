@@ -9,7 +9,6 @@ import org.opencv.core.*
 import org.opencv.imgproc.Imgproc
 import org.opencv.video.Video
 
-
 class BoxProcessor {
 
     // State
@@ -17,6 +16,7 @@ class BoxProcessor {
     @Volatile var currentBarcode: String? = null
     @Volatile var currentPO: String? = null
     @Volatile var feedbackMessage: String = "READY"
+    @Volatile var confidenceScore: Int = 0
     @Volatile var totalCount = 0
 
     @Volatile var target = 0
@@ -359,7 +359,7 @@ class BoxProcessor {
                     currentPO = votedPO
                     triggerValidation()
                 } else {
-                    if (now - stateStartTime > 2000) {
+                    if (now - stateStartTime > Config.PO_TIMEOUT_MS) {
                         feedbackMessage = "TIMEOUT PO"
                         currentState = AppState.ERROR_LOCKED
                         stateStartTime = now
@@ -387,13 +387,21 @@ class BoxProcessor {
     }
 
     fun addPO(startPO: String) {
-        if (currentState == AppState.PROCESSING) poBuffer.add(startPO)
+        if (currentState == AppState.PROCESSING) {
+            poBuffer.add(startPO)
+            feedbackMessage = "SCANNING... ${poBuffer.size}/${Config.VOTING_BUFFER_SIZE}"
+        }
     }
 
     private fun getVotedPO(): String? {
         synchronized(poBuffer) {
-            if (poBuffer.size >= 2) {
-                return poBuffer.groupingBy { it }.eachCount().maxByOrNull { it.value }?.key
+            if (poBuffer.size >= Config.VOTING_BUFFER_SIZE) {
+                val counts = poBuffer.groupingBy { it }.eachCount()
+                val best = counts.maxByOrNull { it.value }
+                if (best != null) {
+                    confidenceScore = (best.value * 100) / poBuffer.size
+                    return best.key
+                }
             }
         }
         return null
@@ -421,7 +429,7 @@ class BoxProcessor {
         } catch (e: Exception) {
             Log.e("BoxProcessor", "Error releasing prevPoints", e)
         }
-        
+
         try {
             prevGray?.release()
             prevGray = null
