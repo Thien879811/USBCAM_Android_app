@@ -389,12 +389,12 @@ class DemoFragment : CameraFragment(), IPreviewDataCallBack {
             // Map Logic -> New UI
             mViewBinding?.let { binding ->
                 // Status
-                if (currentState == AppState.SUCCESS || currentState == AppState.VALIDATING) {
-                    binding.tvStatusOk.text =
-                            "${boxProcessor.feedbackMessage} (${boxProcessor.confidenceScore}%)"
-                } else {
-                    binding.tvStatusOk.text = boxProcessor.feedbackMessage
-                }
+                binding.tvStatusOk.text =
+                        when (currentState) {
+                            AppState.SUCCESS -> "SUCCESS"
+                            AppState.ERROR_LOCKED -> "FAILURE"
+                            else -> ""
+                        }
 
                 // Fields
                 binding.tvUpcValue.text = boxProcessor.currentBarcode ?: "--"
