@@ -36,7 +36,7 @@ object Config {
     const val PO_TIMEOUT_MS = 8000L
 
     // --- PERFORMANCE & THERMAL CONTROL ---
-    const val MAX_PROCESSING_FPS = 25
+    const val MAX_PROCESSING_FPS = 20
     const val SCAN_THROTTLE_MS = 500L
 
     // --- AUDIO ---
