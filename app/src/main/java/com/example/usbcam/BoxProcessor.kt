@@ -24,6 +24,7 @@ class BoxProcessor {
     // Internal State
     private var lastSuccessBarcode: String? = null
     private var lastSuccessTime = 0L
+    private var startSide = 0 // 0: None, -1: Left, 1: Right
 
     // --- KINEMATIC TRACKING ---
     // User Requirement: Use synchronized when reading/writing trackingRect
@@ -69,7 +70,11 @@ class BoxProcessor {
                 feedbackMessage = "READY"
                 resetTrackingData()
             }
-            AppState.PROCESSING, AppState.VALIDATING, AppState.SUCCESS, AppState.ERROR_LOCKED -> {
+            AppState.ENTERING,
+            AppState.PROCESSING,
+            AppState.VALIDATING,
+            AppState.SUCCESS,
+            AppState.ERROR_LOCKED -> {
                 // 1. KINEMATICS UPDATE
                 val trackResult = updateKinematics(currentGray)
 
@@ -169,8 +174,30 @@ class BoxProcessor {
             }
 
             if (validCount > 0) {
-                val currVx = (finalDx / validCount).toFloat()
-                val currVy = (finalDy / validCount).toFloat()
+                var currVx = (finalDx / validCount).toFloat()
+                var currVy = (finalDy / validCount).toFloat()
+
+                // --- DIRECTION CHECK (Robust) ---
+                // 1. Vertical Drift Check
+                if (abs(currVy) > Config.MAX_VERTICAL_VELOCITY) {
+                    // Instead of resetting, we just ignore this "shake" frame
+                    currVx = 0f
+                    currVy = 0f
+                    Log.d("BoxProcessor", "Ignored Vertical Shake: $currVy")
+                }
+
+                // 2. Horizontal Dominance Check
+                // Only enforce if significant movement is detected
+                else if (abs(currVx) > Config.MIN_VELOCITY_THRESHOLD ||
+                                abs(currVy) > Config.MIN_VELOCITY_THRESHOLD
+                ) {
+                    if (abs(currVx) < abs(currVy) * Config.HORIZONTAL_DOMINANCE_RATIO) {
+                        // Irregular/Diagonal move -> Dampen it
+                        currVx = 0f
+                        currVy = 0f
+                        Log.d("BoxProcessor", "Ignored Irregular Move: Vx=$currVx, Vy=$currVy")
+                    }
+                }
 
                 // --- VELOCITY UPDATE & DEADBAND ---
                 var rawVx =
@@ -281,26 +308,51 @@ class BoxProcessor {
         return (atLeftEdge && movingLeft) || (atRightEdge && movingRight)
     }
 
+    private var entryFrameCount = 0
+
     // --- SETUP & UTILS ---
 
     fun onBarcodeDetected(barcode: String, boxRect: android.graphics.Rect, grayMat: Mat) {
-        if (currentState != AppState.IDLE) return
-
         val now = System.currentTimeMillis()
+
+        // 1. DEDUPLICATION (Global)
         if (barcode == lastSuccessBarcode &&
                         (now - lastSuccessTime < Config.DEDUPLICATION_WINDOW_MS)
         ) {
             return
         }
 
+        // 2. EDGE CHECK & INTERRUPT
+        // Allow interrupt if we are at the edges, even if currently busy
+        val centerX = boxRect.centerX()
+        val imgW = grayMat.cols()
+        val isLeftEdge = centerX < (imgW * Config.EDGE_INTERRUPT_ZONE_PERCENT)
+        val isRightEdge = centerX > (imgW * (1.0f - Config.EDGE_INTERRUPT_ZONE_PERCENT))
+
+        if (isLeftEdge || isRightEdge) {
+            // Force reset and new track
+            if (currentState != AppState.IDLE) {
+                resetTrackingData() // Only reset data, keep state flow
+                Log.d("BoxProcessor", "INTERRUPT: New box at edge")
+            }
+        } else {
+            // Center detection: Only accepted if IDLE
+            if (currentState != AppState.IDLE) return
+        }
+
+        // 3. INITIALIZE
         if (initializeTracking(boxRect, grayMat)) {
-            currentState = AppState.PROCESSING
+            currentState = AppState.ENTERING
             stateStartTime = now
             currentBarcode = barcode
             currentPO = null
             poBuffer.clear()
-            feedbackMessage = "SCANNING..."
+            feedbackMessage = "ENTERING..."
             prevGray = grayMat.clone()
+            entryFrameCount = 0
+
+            // Record Start Side
+            startSide = if (isLeftEdge) -1 else if (isRightEdge) 1 else 0
         }
     }
 
@@ -353,6 +405,31 @@ class BoxProcessor {
     // --- LOGIC ---
     private fun handleStateLogic(now: Long) {
         when (currentState) {
+            AppState.ENTERING -> {
+                // Directional Validation based on Start Side
+                var validEntry = false
+
+                if (startSide == -1) { // Left Start -> Needs Positive Velocity (Right)
+                    if (velocityX > Config.MIN_ENTRY_VELOCITY) validEntry = true
+                } else if (startSide == 1) { // Right Start -> Needs Negative Velocity (Left)
+                    if (velocityX < -Config.MIN_ENTRY_VELOCITY) validEntry = true
+                } else {
+                    // Center Start (IDLE only) -> Needs any strong horizontal velocity
+                    if (abs(velocityX) > Config.MIN_ENTRY_VELOCITY) validEntry = true
+                }
+
+                if (validEntry) {
+                    currentState = AppState.PROCESSING
+                    stateStartTime = now
+                    feedbackMessage = "SCANNING..."
+                } else {
+                    entryFrameCount++
+                    if (entryFrameCount > Config.ENTRY_GRACE_FRAMES) {
+                        resetToIdle()
+                        Log.d("BoxProcessor", "Entry failed: No valid velocity ($velocityX)")
+                    }
+                }
+            }
             AppState.PROCESSING -> {
                 val votedPO = getVotedPO()
                 if (votedPO != null) {

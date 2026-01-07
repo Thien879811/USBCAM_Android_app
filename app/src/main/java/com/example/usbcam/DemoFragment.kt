@@ -520,7 +520,7 @@ class DemoFragment : CameraFragment(), IPreviewDataCallBack {
 
     private fun handleStateFeedback(newState: AppState) {
         if (toneGen == null)
-                toneGen = android.media.ToneGenerator(android.media.AudioManager.STREAM_ALARM, 100)
+                toneGen = android.media.ToneGenerator(android.media.AudioManager.STREAM_ALARM, Config.BEEP_VOLUME)
         if (vibrator == null)
                 vibrator =
                         activity?.getSystemService(android.content.Context.VIBRATOR_SERVICE) as
