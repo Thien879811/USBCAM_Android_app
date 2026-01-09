@@ -88,14 +88,6 @@ class DemoFragment : CameraFragment(), IPreviewDataCallBack {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        // Bindings are already set up in getRootView via mViewBinding
-        //        viewModel.timeSlotData.observe(viewLifecycleOwner) { data ->
-        //            mViewBinding?.tvFrameTime?.text = data.frameTime
-        //            mViewBinding?.tvTagert?.text = data.target.toString()
-        //            mViewBinding?.tvQuantity?.text = data.quantity.toString()
-        //        }
-
-        // Setup RecyclerView
         val adapter = TimeSlotAdapter()
         mViewBinding?.recyclerTimeSlot?.apply {
             layoutManager = LinearLayoutManager(context)
@@ -119,6 +111,15 @@ class DemoFragment : CameraFragment(), IPreviewDataCallBack {
         viewModel.loadTotal()
         viewModel.loadTarget()
         viewModel.loadAllTimeSlots()
+
+        mViewBinding?.btnSettings?.setOnClickListener {
+            val configFragment = ConfigFragment()
+            parentFragmentManager
+                    .beginTransaction()
+                    .replace(android.R.id.content, configFragment) // Or a specific container ID
+                    .addToBackStack(null)
+                    .commit()
+        }
 
         // Monitor Network
         val networkMonitor = com.example.usbcam.utils.NetworkConnectionMonitor(requireContext())
@@ -520,7 +521,11 @@ class DemoFragment : CameraFragment(), IPreviewDataCallBack {
 
     private fun handleStateFeedback(newState: AppState) {
         if (toneGen == null)
-                toneGen = android.media.ToneGenerator(android.media.AudioManager.STREAM_ALARM, Config.BEEP_VOLUME)
+                toneGen =
+                        android.media.ToneGenerator(
+                                android.media.AudioManager.STREAM_ALARM,
+                                Config.BEEP_VOLUME
+                        )
         if (vibrator == null)
                 vibrator =
                         activity?.getSystemService(android.content.Context.VIBRATOR_SERVICE) as

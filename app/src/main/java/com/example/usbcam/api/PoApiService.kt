@@ -19,9 +19,7 @@ interface PoApiService {
     @GET("api/select-po") fun getPoDetails(@Query("po") po: String): Call<PoResponse>
 
     @GET("api/target-value")
-    suspend fun getTargetByLean(
-        @Query("depno") depno: String
-    ): retrofit2.Response<TargetResponse>
+    suspend fun getTargetByLean(@Query("depno") depno: String): retrofit2.Response<TargetResponse>
 
     @retrofit2.http.POST("api/sync/detail")
     suspend fun syncDetail(
@@ -32,6 +30,8 @@ interface PoApiService {
     suspend fun syncTotal(
             @retrofit2.http.Body total: com.example.usbcam.data.model.ShoeboxTotal
     ): retrofit2.Response<Void>
+
+    @GET("api/app-version") suspend fun checkUpdate(): retrofit2.Response<UpdateResponse>
 
     companion object {
         private const val BASE_URL = "http://192.168.30.169:3000/"
