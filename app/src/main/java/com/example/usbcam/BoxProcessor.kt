@@ -2,11 +2,11 @@ package com.example.usbcam
 
 import android.graphics.RectF
 import android.util.Log
-import java.util.Collections
 import kotlin.math.abs
 import kotlin.math.sqrt
 import org.opencv.core.*
 import org.opencv.imgproc.Imgproc
+import org.opencv.video.BackgroundSubtractorKNN
 import org.opencv.video.Video
 
 class BoxProcessor {
@@ -20,6 +20,9 @@ class BoxProcessor {
     @Volatile var totalCount = 0
 
     @Volatile var target = 0
+
+    // Gate scanning
+    @Volatile var isMotionTriggered = false
 
     // Internal State
     private var lastSuccessBarcode: String? = null
@@ -35,19 +38,24 @@ class BoxProcessor {
     private var prevPoints: MatOfPoint2f? = null
 
     // Physics
+    private val kinematicsLock = Any() // Lock cho prevGray, prevPoints, velocity
     private var velocityX = 0f
     private var velocityY = 0f
     private var coastingCounter = 0
     private var isCoasting = false
 
     // Logic
-    private val poBuffer = Collections.synchronizedList(ArrayList<String>())
     private var stateStartTime = 0L
     private var lastApiAttemptTime = 0L
 
     // API result
     var apiResponse: com.example.usbcam.api.PoResponse? = null
     var identificationStarted = false
+
+    // --- KNN cho phát hiện chuyển động giả & vật thể rời đi ---
+    private var knnSubtractor: BackgroundSubtractorKNN? = null
+    private var fgMask: Mat? = null
+    private var isObjectGone = false
 
     // --- THREAD SAFE GETTERS CHO UI ---
     fun getSafeTrackingRect(): RectF? {
@@ -60,42 +68,62 @@ class BoxProcessor {
     fun updateLogic(currentGray: Mat) {
         val now = System.currentTimeMillis()
 
-        if (currentState != AppState.IDLE && prevGray == null) {
-            prevGray = currentGray.clone()
-            return
+        synchronized(kinematicsLock) {
+            if (currentState != AppState.IDLE && prevGray == null) {
+                prevGray = currentGray.clone()
+                return
+            }
         }
 
         when (currentState) {
             AppState.IDLE -> {
                 feedbackMessage = "READY"
                 resetTrackingData()
+                detectIdleMotion(currentGray) // Check for motion
             }
             AppState.ENTERING,
             AppState.PROCESSING,
             AppState.VALIDATING,
             AppState.SUCCESS,
             AppState.ERROR_LOCKED -> {
-                // 1. KINEMATICS UPDATE
-                val trackResult = updateKinematics(currentGray)
+                // Cập nhật KNN trước để thuật toán có mặt nạ (mask) mới nhất
+
+                updateKNN(currentGray)
+
+                // 1. KINEMATICS UPDATE (Optical Flow)
+                val trackResult = synchronized(kinematicsLock) { updateKinematics(currentGray) }
 
                 if (!trackResult) {
-                    Log.w("BoxProcessor", "Lost Track -> Reset")
+                    Log.w("BoxProcessor", "Track failed -> State: $currentState -> Reset")
                     resetToIdle()
                     return
                 }
 
-                // 2. STRICT EXIT CHECK
-                if (shouldStrictlyReset(currentGray.cols(), currentGray.rows())) {
-                    resetToIdle()
-                    return
+                // 2. STRICT EXIT CHECK (Mép biên)
+
+                //                 if (shouldStrictlyReset(currentGray.cols())) {
+                //                     Log.d("BoxProcessor", "Strict Reset: Edge reached")
+                //                     resetToIdle()
+                //                     return
+                //                 }
+
+                // 3. KNN DISAPPEARANCE CHECK (Xác nhận vật thể rời khỏi)
+                if (currentState == AppState.SUCCESS || currentState == AppState.ERROR_LOCKED) {
+                    if (checkDisappearanceKNN()) {
+                        Log.d("BoxProcessor", "KNN: Object Gone -> Reset to IDLE")
+                        resetToIdle()
+                        return
+                    }
                 }
 
                 handleStateLogic(now)
             }
         }
 
-        prevGray?.release()
-        prevGray = currentGray.clone()
+        synchronized(kinematicsLock) {
+            prevGray?.release()
+            prevGray = currentGray.clone()
+        }
     }
 
     /** CORE LOGIC: Optical Flow + Outlier Rejection + Replenishment */
@@ -240,7 +268,7 @@ class BoxProcessor {
     private fun enterCoasting() {
         isCoasting = true
         coastingCounter++
-        feedbackMessage = "COASTING ($coastingCounter)"
+        feedbackMessage = "COASTING"
 
         // Coasting prediction
         synchronized(trackingLock) { trackingRect?.offset(velocityX, velocityY) }
@@ -294,7 +322,7 @@ class BoxProcessor {
         }
     }
 
-    private fun shouldStrictlyReset(imgW: Int, imgH: Int): Boolean {
+    private fun shouldStrictlyReset(imgW: Int): Boolean {
         val rect = synchronized(trackingLock) { trackingRect } ?: return true
         val centerX = rect.centerX()
         val thresholdW = imgW * Config.EDGE_THRESHOLD_PERCENT
@@ -315,7 +343,13 @@ class BoxProcessor {
     fun onBarcodeDetected(barcode: String, boxRect: android.graphics.Rect, grayMat: Mat) {
         val now = System.currentTimeMillis()
 
-        // 1. DEDUPLICATION (Global)
+        // 1. MOTION CHECK (New Requirement)
+//        if (!isMotionTriggered) {
+//            // Ignore scan if no motion detected
+//            return
+//        }
+
+        // 2. DEDUPLICATION (Global)
         if (barcode == lastSuccessBarcode &&
                         (now - lastSuccessTime < Config.DEDUPLICATION_WINDOW_MS)
         ) {
@@ -342,17 +376,21 @@ class BoxProcessor {
 
         // 3. INITIALIZE
         if (initializeTracking(boxRect, grayMat)) {
-            currentState = AppState.ENTERING
-            stateStartTime = now
-            currentBarcode = barcode
-            currentPO = null
-            poBuffer.clear()
-            feedbackMessage = "ENTERING..."
-            prevGray = grayMat.clone()
-            entryFrameCount = 0
+            synchronized(kinematicsLock) {
+                currentState = AppState.PROCESSING
+                stateStartTime = now
+                currentBarcode = barcode
+                currentPO = null
+                feedbackMessage = "PROCESSING..."
 
-            // Record Start Side
-            startSide = if (isLeftEdge) -1 else if (isRightEdge) 1 else 0
+                prevGray?.release()
+                prevGray = grayMat.clone()
+                entryFrameCount = 0
+
+                // Record Start Side
+                startSide = if (isLeftEdge) -1 else if (isRightEdge) 1 else 0
+            }
+            Log.d("BoxProcessor", "New tracking started for: $barcode")
         }
     }
 
@@ -375,6 +413,15 @@ class BoxProcessor {
                         roiPoints.map { p -> Point(p.x + rect.left, p.y + rect.top) }.toTypedArray()
 
                 prevPoints = MatOfPoint2f(*fullPoints)
+
+                // Tinh chỉnh tọa độ điểm đặc trưng đến mức sub-pixel để tăng độ bám dính
+                Imgproc.cornerSubPix(
+                        gray,
+                        prevPoints!!,
+                        Size(5.0, 5.0),
+                        Size(-1.0, -1.0),
+                        TermCriteria(TermCriteria.EPS + TermCriteria.COUNT, 30, 0.1)
+                )
 
                 synchronized(trackingLock) {
                     trackingRect =
@@ -402,6 +449,105 @@ class BoxProcessor {
         }
     }
 
+    // --- KNN LOGIC ---
+
+    /**
+     * Cập nhật mô hình trừ nền bằng KNN. Giúp lọc bỏ các chuyển động nhỏ, rung lắc hoặc thay đổi
+     * ánh sáng không phải vật thể.
+     */
+    private fun updateKNN(gray: Mat) {
+        if (knnSubtractor == null || Config.isKnnConfigChanged) {
+            Log.d("BoxProcessor", "UpdateKNN: Re-creating (Changed: ${Config.isKnnConfigChanged})")
+            knnSubtractor =
+                    Video.createBackgroundSubtractorKNN(
+                            Config.KNN_HISTORY,
+                            Config.KNN_DIST_2_THRESHOLD,
+                            false
+                    )
+            Config.isKnnConfigChanged = false
+        }
+        if (fgMask == null) fgMask = Mat()
+
+        // Giảm độ phân giải để tăng tốc độ xử lý
+        val smallGray = Mat()
+        Imgproc.resize(gray, smallGray, Size(gray.cols() / 2.0, gray.rows() / 2.0))
+
+        knnSubtractor?.apply(smallGray, fgMask!!)
+        smallGray.release()
+    }
+
+    /**
+     * Kiểm tra xem vật thể có còn nằm trong vùng tracking dựa trên mặt nạ KNN. Trả về true nếu tỷ
+     * lệ pixel "chuyển động" quá thấp (vật thể đã đi mất).
+     */
+    private fun checkDisappearanceKNN(): Boolean {
+        var isStationary = false
+        var trackingOK = false
+
+        synchronized(kinematicsLock) {
+            isStationary =
+                    abs(velocityX) < Config.MIN_VELOCITY_THRESHOLD &&
+                            abs(velocityY) < Config.MIN_VELOCITY_THRESHOLD
+            trackingOK = !isCoasting
+        }
+
+        if (isStationary && trackingOK) {
+            return false
+        }
+
+        return getKNNRatio() < Config.KNN_DISAPPEAR_PERCENT
+    }
+
+    private fun getKNNRatio(): Float {
+        val mask = fgMask ?: return 0f
+        val rect = synchronized(trackingLock) { trackingRect } ?: return 0f
+
+        try {
+            val x = (rect.left / 2).toInt().coerceIn(0, mask.cols() - 1)
+            val y = (rect.top / 2).toInt().coerceIn(0, mask.rows() - 1)
+            val w = (rect.width() / 2).toInt().coerceAtMost(mask.cols() - x)
+            val h = (rect.height() / 2).toInt().coerceAtMost(mask.rows() - y)
+
+            if (w <= 5 || h <= 5) return 0f
+
+            val roi = mask.submat(y, y + h, x, x + w)
+            val nonZero = Core.countNonZero(roi)
+            val totalPixels = w * h
+            val ratio = nonZero.toFloat() / totalPixels
+            roi.release()
+            Log.d("BoxProcessor", "Ratio ${ratio}")
+            return ratio
+        } catch (e: Exception) {
+            return 0f
+        }
+    }
+
+    // --- IDLE MOTION DETECTION ---
+    private fun detectIdleMotion(gray: Mat) {
+        val prev = synchronized(kinematicsLock) { prevGray } ?: return
+
+        // Use Frame Difference
+        val diff = Mat()
+        try {
+            Core.absdiff(gray, prev, diff)
+            Imgproc.threshold(diff, diff, 25.0, 255.0, Imgproc.THRESH_BINARY)
+
+            val nonZero = Core.countNonZero(diff)
+            val total = gray.total()
+            val ratio = nonZero.toFloat() / total.toFloat()
+
+            isMotionTriggered = ratio > Config.IDLE_MOTION_PERCENT
+
+            if (isMotionTriggered) {
+                // feedbackMessage = "MOTION: ${"%.2f".format(ratio * 100)}%" // Optional debug
+            }
+        } catch (e: Exception) {
+            Log.e("BoxProcessor", "Motion Detect Failed", e)
+        } finally {
+            diff.release()
+        }
+    }
+
     // --- LOGIC ---
     private fun handleStateLogic(now: Long) {
         when (currentState) {
@@ -419,9 +565,19 @@ class BoxProcessor {
                 }
 
                 if (validEntry) {
-                    currentState = AppState.PROCESSING
-                    stateStartTime = now
-                    feedbackMessage = "SCANNING..."
+                    val ratio = getKNNRatio()
+                    if (ratio >= Config.KNN_DISAPPEAR_PERCENT) {
+                        currentState = AppState.PROCESSING
+                        stateStartTime = now
+                        feedbackMessage = "SCANNING..."
+                        Log.d("BoxProcessor", "Motion Confirmed: ratio=$ratio, vel=$velocityX")
+                    } else {
+                        feedbackMessage = "NOISE FILTER..."
+                        entryFrameCount++
+                        if (entryFrameCount % 5 == 0) {
+                            Log.d("BoxProcessor", "Noise Filter: ratio=$ratio, vel=$velocityX")
+                        }
+                    }
                 } else {
                     entryFrameCount++
                     if (entryFrameCount > Config.ENTRY_GRACE_FRAMES) {
@@ -431,16 +587,10 @@ class BoxProcessor {
                 }
             }
             AppState.PROCESSING -> {
-                val votedPO = getVotedPO()
-                if (votedPO != null) {
-                    currentPO = votedPO
-                    triggerValidation()
-                } else {
-                    if (now - stateStartTime > Config.PO_TIMEOUT_MS) {
-                        feedbackMessage = "TIMEOUT PO"
-                        currentState = AppState.ERROR_LOCKED
-                        stateStartTime = now
-                    }
+                if (now - stateStartTime > Config.PO_TIMEOUT_MS) {
+                    feedbackMessage = "TIMEOUT PO"
+                    currentState = AppState.ERROR_LOCKED
+                    stateStartTime = now
                 }
             }
             AppState.VALIDATING -> {
@@ -459,29 +609,22 @@ class BoxProcessor {
                     stateStartTime = now
                 }
             }
+            AppState.ERROR_LOCKED -> {
+                if (now - stateStartTime > Config.ERROR_LOCKED_TIMEOUT_MS) {
+                    Log.d("BoxProcessor", "Error Locked Timeout -> Reset to IDLE")
+                    resetToIdle()
+                }
+            }
             else -> {}
         }
     }
 
     fun addPO(startPO: String) {
         if (currentState == AppState.PROCESSING) {
-            poBuffer.add(startPO)
-            feedbackMessage = "SCANNING... ${poBuffer.size}/${Config.VOTING_BUFFER_SIZE}"
+            currentPO = startPO
+            triggerValidation()
+            feedbackMessage = "PO DETECTED: $startPO"
         }
-    }
-
-    private fun getVotedPO(): String? {
-        synchronized(poBuffer) {
-            if (poBuffer.size >= Config.VOTING_BUFFER_SIZE) {
-                val counts = poBuffer.groupingBy { it }.eachCount()
-                val best = counts.maxByOrNull { it.value }
-                if (best != null) {
-                    confidenceScore = (best.value * 100) / poBuffer.size
-                    return best.key
-                }
-            }
-        }
-        return null
     }
 
     private fun triggerValidation() {
@@ -494,31 +637,54 @@ class BoxProcessor {
         resetTrackingData()
         currentBarcode = null
         currentPO = null
-        poBuffer.clear()
         feedbackMessage = "READY"
         identificationStarted = false
+        // resetKNN()
     }
 
     private fun resetTrackingData() {
-        try {
-            prevPoints?.release()
-            prevPoints = null
-        } catch (e: Exception) {
-            Log.e("BoxProcessor", "Error releasing prevPoints", e)
-        }
+        synchronized(kinematicsLock) {
+            try {
+                prevPoints?.release()
+                prevPoints = null
+            } catch (e: Exception) {
+                Log.e("BoxProcessor", "Error releasing prevPoints", e)
+            }
 
-        try {
+            // prevGray is NOT released here anymore to support IDLE motion detection
+            // It will be released in release() or overwritten in initializeTracking()
+
+            synchronized(trackingLock) { trackingRect = null }
+
+            velocityX = 0f
+            velocityY = 0f
+            isCoasting = false
+            coastingCounter = 0
+        }
+    }
+
+    fun release() {
+        resetTrackingData()
+
+        synchronized(kinematicsLock) {
             prevGray?.release()
             prevGray = null
-        } catch (e: Exception) {
-            Log.e("BoxProcessor", "Error releasing prevGray", e)
         }
 
-        synchronized(trackingLock) { trackingRect = null }
+        knnSubtractor = null
+        fgMask?.release()
+        fgMask = null
+    }
 
-        velocityX = 0f
-        velocityY = 0f
-        isCoasting = false
-        coastingCounter = 0
+    private fun resetKNN() {
+        Log.d("BoxProcessor", "resetKNN")
+        knnSubtractor =
+                Video.createBackgroundSubtractorKNN(
+                        Config.KNN_HISTORY,
+                        Config.KNN_DIST_2_THRESHOLD,
+                        false
+                )
+        fgMask?.release()
+        fgMask = Mat()
     }
 }

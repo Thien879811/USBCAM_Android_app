@@ -57,6 +57,8 @@ class DemoFragment : CameraFragment(), IPreviewDataCallBack {
     @Volatile private var isProcessingThreadRunning = false
     private var processingThread: Thread? = null
 
+    private var mClahe: org.opencv.imgproc.CLAHE? = null
+
     @Volatile private var isScanningBarcode = false
     @Volatile private var isScanningPO = false
 
@@ -153,8 +155,8 @@ class DemoFragment : CameraFragment(), IPreviewDataCallBack {
 
     override fun getCameraRequest(): CameraRequest {
         return CameraRequest.Builder()
-                .setPreviewWidth(640)
-                .setPreviewHeight(480)
+                .setPreviewWidth(1280)
+                .setPreviewHeight(960)
                 .setRenderMode(CameraRequest.RenderMode.OPENGL)
                 .setDefaultRotateType(RotateType.ANGLE_0)
                 .setPreviewFormat(CameraRequest.PreviewFormat.FORMAT_MJPEG)
@@ -238,12 +240,21 @@ class DemoFragment : CameraFragment(), IPreviewDataCallBack {
             decoded = Imgcodecs.imdecode(buf, Imgcodecs.IMREAD_COLOR)
             buf.release() // Release MatOfByte
 
+            val rgba = mRgba
+            if (rgba == null) {
+                decoded.release()
+                return
+            }
+
             if (!decoded.empty()) {
-                Imgproc.cvtColor(decoded, mRgba, Imgproc.COLOR_BGR2RGBA)
+                Imgproc.cvtColor(decoded, rgba, Imgproc.COLOR_BGR2RGBA)
             } else {
                 // Fallback for NV21/YUV
-                mYuvMat?.put(0, 0, data)
-                Imgproc.cvtColor(mYuvMat, mRgba, Imgproc.COLOR_YUV2RGBA_NV21)
+                val yuv = mYuvMat
+                if (yuv != null) {
+                    yuv.put(0, 0, data)
+                    Imgproc.cvtColor(yuv, rgba, Imgproc.COLOR_YUV2RGBA_NV21)
+                }
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error decoding frame", e)
@@ -252,11 +263,15 @@ class DemoFragment : CameraFragment(), IPreviewDataCallBack {
         }
         decoded.release()
 
-        if (mRgba == null || mRgba!!.empty()) return
+        val rgba = mRgba
+        if (rgba == null || rgba.empty()) return
 
         // Gray for processing
         val gray = Mat()
-        Imgproc.cvtColor(mRgba, gray, Imgproc.COLOR_RGBA2GRAY)
+        Imgproc.cvtColor(rgba, gray, Imgproc.COLOR_RGBA2GRAY)
+
+        // --- IMAGE ADJUSTMENT (Focus/Enhancement) ---
+        applyImageAdjustments(gray)
 
         // --- CORE KINEMATIC UPDATE ---
         try {
@@ -274,7 +289,7 @@ class DemoFragment : CameraFragment(), IPreviewDataCallBack {
                             (currentState == AppState.PROCESSING && !isScanningPO)
             ) {
 
-                val bmp = convertMatToBitmap(mRgba!!)
+                val bmp = convertMatToBitmap(rgba)
 
                 if (bmp != null) {
                     when (currentState) {
@@ -305,6 +320,28 @@ class DemoFragment : CameraFragment(), IPreviewDataCallBack {
 
         updateUI()
         gray.release()
+    }
+
+    private fun applyImageAdjustments(gray: Mat) {
+        // 1. CLAHE (Contrast Limited Adaptive Histogram Equalization)
+        if (Config.USE_CLAHE) {
+            if (mClahe == null) {
+                mClahe =
+                        Imgproc.createCLAHE(
+                                Config.CLAHE_CLIP_LIMIT,
+                                Size(Config.CLAHE_TILE_SIZE, Config.CLAHE_TILE_SIZE)
+                        )
+            }
+            mClahe?.apply(gray, gray)
+        }
+
+        // 2. UNSIHARP MASK (Sharpening)
+        if (Config.USE_SHARPEN) {
+            val blurred = Mat()
+            Imgproc.GaussianBlur(gray, blurred, Size(0.0, 0.0), 3.0)
+            Core.addWeighted(gray, 1.5, blurred, -0.5, 0.0, gray)
+            blurred.release()
+        }
     }
 
     private fun scanBarcode(bitmap: Bitmap, grayMatClone: Mat) {
@@ -340,11 +377,11 @@ class DemoFragment : CameraFragment(), IPreviewDataCallBack {
     }
 
     private fun scanPOInRegion(fullBitmap: Bitmap, anchorRect: android.graphics.Rect) {
-        val gap = 5
-        val roiX = Math.max(0, anchorRect.left - 20)
+        val gap = 10
+        val roiX = Math.max(0, anchorRect.left - 40)
         val roiY = Math.max(0, anchorRect.bottom + gap)
-        val roiW = Math.min(fullBitmap.width - roiX, anchorRect.width() + 100)
-        val roiH = Math.min(fullBitmap.height - roiY, 150)
+        val roiW = Math.min(fullBitmap.width - roiX, anchorRect.width() + 200)
+        val roiH = Math.min(fullBitmap.height - roiY, 300)
 
         if (roiW > 10 && roiH > 10) {
             try {
@@ -392,6 +429,8 @@ class DemoFragment : CameraFragment(), IPreviewDataCallBack {
                 // Status
                 binding.tvStatusOk.text =
                         when (currentState) {
+                            AppState.IDLE -> "IDLE"
+                            AppState.PROCESSING-> "PROCESSING"
                             AppState.SUCCESS -> "SUCCESS"
                             AppState.ERROR_LOCKED -> "FAILURE"
                             else -> ""
@@ -579,6 +618,7 @@ class DemoFragment : CameraFragment(), IPreviewDataCallBack {
     override fun onDestroy() {
         super.onDestroy()
         stopProcessingThread()
+        boxProcessor.release()
         try {
             toneGen?.release()
         } catch (e: Exception) {

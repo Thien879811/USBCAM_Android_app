@@ -47,6 +47,105 @@ class ConfigFragment : Fragment() {
         view.findViewById<Button>(R.id.btnExit).setOnClickListener {
             parentFragmentManager.popBackStack()
         }
+
+        setupConfigurationUI(view)
+    }
+
+    private fun setupConfigurationUI(view: View) {
+        val container = view.findViewById<android.widget.LinearLayout>(R.id.containerSettings)
+
+        // 1. Beep Volume
+        addSlider(
+                container,
+                "Beep Volume",
+                "Âm lượng phản hồi (0-100)",
+                Config.BEEP_VOLUME.toFloat(),
+                0f,
+                100f,
+                1f
+        ) { value -> Config.BEEP_VOLUME = value.toInt() }
+
+        // 2. KNN History
+        addSlider(
+                container,
+                "KNN History",
+                "Số khung hình học nền (Mặc định: 200)",
+                Config.KNN_HISTORY.toFloat(),
+                10f,
+                500f,
+                10f
+        ) { value ->
+            Config.KNN_HISTORY = value.toInt()
+            Config.isKnnConfigChanged = true
+        }
+
+        // 3. KNN Dist Threshold
+        addSlider(
+                container,
+                "KNN Dist Threshold",
+                "Ngưỡng phân biệt nền (Mặc định: 150.0). Cao = ít nhiễu hơn.",
+                Config.KNN_DIST_2_THRESHOLD.toFloat(),
+                10f,
+                1000f,
+                10f
+        ) { value ->
+            Config.KNN_DIST_2_THRESHOLD = value.toDouble()
+            Config.isKnnConfigChanged = true
+        }
+
+        // 4. KNN Disappear Percent
+        addSlider(
+                container,
+                "KNN Disappear %",
+                "Tỷ lệ biến mất (Mặc định: 0.35). Dưới % này coi như Gone.",
+                Config.KNN_DISAPPEAR_PERCENT,
+                0.01f,
+                1.0f,
+                0.01f
+        ) { value -> Config.KNN_DISAPPEAR_PERCENT = value }
+    }
+
+    private fun addSlider(
+            container: android.widget.LinearLayout,
+            label: String,
+            description: String,
+            initialValue: Float,
+            min: Float,
+            max: Float,
+            step: Float,
+            onChange: (Float) -> Unit
+    ) {
+        val itemView = layoutInflater.inflate(R.layout.item_config_slider, container, false)
+        val tvLabel = itemView.findViewById<TextView>(R.id.tvLabel)
+        val tvValue = itemView.findViewById<TextView>(R.id.tvValue)
+        val tvDesc = itemView.findViewById<TextView>(R.id.tvDescription)
+        val slider = itemView.findViewById<com.google.android.material.slider.Slider>(R.id.slider)
+
+        tvLabel.text = label
+        tvDesc.text = description
+        tvValue.text = formatValue(initialValue)
+
+        slider.valueFrom = min
+        slider.valueTo = max
+        slider.stepSize = step
+        slider.value = initialValue.coerceIn(min, max)
+
+        slider.addOnChangeListener { _, value, fromUser ->
+            if (fromUser) {
+                tvValue.text = formatValue(value)
+                onChange(value)
+            }
+        }
+
+        container.addView(itemView)
+    }
+
+    private fun formatValue(value: Float): String {
+        return if (value % 1.0 == 0.0) {
+            value.toInt().toString()
+        } else {
+            String.format("%.2f", value)
+        }
     }
 
     private fun checkUpdate() {
